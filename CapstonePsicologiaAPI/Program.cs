@@ -9,6 +9,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Secretos locales (p. ej. la contraseña del correo): este archivo no se sube al git.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 // Add services to the container.
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -17,7 +20,32 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IAdminData, AdminData>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IUsuarioData, UsuarioData>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<ISolicitudData, SolicitudData>();
+builder.Services.AddScoped<ISolicitudService, SolicitudService>();
+builder.Services.AddScoped<IEventoData, EventoData>();
+builder.Services.AddScoped<IEventoService, EventoService>();
+builder.Services.AddScoped<IContactoData, ContactoData>();
+builder.Services.AddScoped<IContactoService, ContactoService>();
+builder.Services.AddScoped<ICitaData, CitaData>();
+builder.Services.AddScoped<ICitaService, CitaService>();
+builder.Services.AddScoped<IPsicologoService, PsicologoService>();
+builder.Services.AddScoped<IColaboradorData, ColaboradorData>();
+builder.Services.AddScoped<IColaboradorService, ColaboradorService>();
+builder.Services.AddScoped<IDisponibilidadData, DisponibilidadData>();
+builder.Services.AddScoped<IDisponibilidadService, DisponibilidadService>();
+builder.Services.AddScoped<IReservaService, ReservaService>();
+builder.Services.AddScoped<IDashboardData, DashboardData>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
+
+// Correo: cada correo se guarda en la base y el proceso en segundo plano lo envía si hay SMTP configurado.
+builder.Services.Configure<CorreoOpciones>(builder.Configuration.GetSection("Correo"));
+builder.Services.AddSingleton<ICorreoEnvio, SmtpCorreoEnvio>();
+builder.Services.AddScoped<ICorreoData, CorreoData>();
+builder.Services.AddScoped<ICorreoService, CorreoService>();
+builder.Services.AddHostedService<EnvioCorreoWorker>();
 
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services
@@ -34,6 +62,20 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero,
+        };
+
+        // Un token firmado sigue siendo válido hasta que vence, así que además se comprueba en la base que la
+        // cuenta siga activa: al desactivar a alguien, su sesión deja de funcionar en la siguiente petición.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async contexto =>
+            {
+                var idTexto = contexto.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var usuarios = contexto.HttpContext.RequestServices.GetRequiredService<IUsuarioData>();
+
+                if (!int.TryParse(idTexto, out var id) || !await usuarios.EstaActivoAsync(id))
+                    contexto.Fail("La cuenta no existe o está desactivada");
+            },
         };
     });
 builder.Services.AddAuthorization();
@@ -66,6 +108,20 @@ using (var scope = app.Services.CreateScope())
 app.UseHttpsRedirection();
 
 app.UseCors("Front");
+
+// Las reglas del negocio (dato inválido, sin permiso, no existe, ya ocupado) responden con su código y mensaje.
+app.Use(async (contexto, siguiente) =>
+{
+    try
+    {
+        await siguiente();
+    }
+    catch (ReglaNegocioException ex) when (!contexto.Response.HasStarted)
+    {
+        contexto.Response.StatusCode = ex.Codigo;
+        await contexto.Response.WriteAsJsonAsync(new { mensaje = ex.Message });
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

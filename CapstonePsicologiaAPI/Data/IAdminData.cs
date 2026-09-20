@@ -4,7 +4,12 @@ namespace CapstonePsicologiaAPI.Data;
 
 public interface IAdminData
 {
-    Task<Usuario?> ObtenerPorNombreUsuarioAsync(string nombreUsuario);
+    /// <summary>Busca por nombre de usuario o por correo (así también entran usuarios y psicólogos).</summary>
+    Task<Usuario?> ObtenerPorUsuarioOCorreoAsync(string valor);
+
     Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario);
     Task CrearAsync(Usuario usuario);
+
+    /// <summary>Anota la fecha del último inicio de sesión.</summary>
+    Task RegistrarAccesoAsync(int usuarioId);
 }
