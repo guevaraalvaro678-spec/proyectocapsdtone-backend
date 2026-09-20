@@ -78,6 +78,13 @@ public static class PlantillasCorreo
             enlace,
             "Ver mis citas");
 
+    public static string CitaConfirmada(string nombre, string conQuien, DateTime fechaUtc, string modalidad, string? lugar, string motivo, string enlace) =>
+        Envolver(
+            $"¡Tu cita fue confirmada, {H(PrimerNombre(nombre))}!",
+            $"<p><strong>{H(conQuien)}</strong> aceptó tu solicitud de cita.</p>{DetalleCita(fechaUtc, modalidad, lugar, motivo)}",
+            enlace,
+            "Ver mis citas");
+
     public static string RecordatorioCita(string nombre, string conQuien, DateTime fechaUtc, string modalidad, string? lugar, string motivo, string enlace) =>
         Envolver(
             $"Recordatorio de tu cita, {H(PrimerNombre(nombre))}",

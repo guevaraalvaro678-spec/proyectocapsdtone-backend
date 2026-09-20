@@ -182,6 +182,9 @@ public class CitaService : ICitaService
         if (datos.Estado == EstadosCita.Cancelada && estadoAnterior != EstadosCita.Cancelada)
             await NotificarCanceladaAsync(cita);
 
+        if (datos.Estado == EstadosCita.Confirmada && estadoAnterior == EstadosCita.Programada)
+            await NotificarConfirmadaAsync(cita);
+
         return Mapeos.ACita(cita, incluirNotas: actorRol != Roles.Usuario);
     }
 
@@ -248,23 +251,30 @@ public class CitaService : ICitaService
 
     private async Task NotificarAgendadaAsync(Cita cita, bool reprogramada)
     {
-        var asunto = reprogramada ? "Tu cita fue reprogramada" : "Se agendó una cita";
+        // El paciente no recibe correo al solicitar: se le avisa cuando el psicólogo confirma la cita.
+        var asunto = reprogramada ? "Una cita fue reprogramada" : "Nueva solicitud de cita";
         var paciente = cita.Paciente!;
         var psicologo = cita.Psicologo!;
-
-        if (paciente is { Correo: not null, RecordatoriosCorreo: true })
-        {
-            await _correo.EncolarAsync(
-                paciente.Correo, paciente.Nombre, asunto,
-                PlantillasCorreo.NuevaCita(paciente.Nombre, psicologo.Nombre, false, cita.FechaInicio, cita.Modalidad, cita.Lugar, cita.Motivo, EnlacePaciente()),
-                TiposCorreo.NuevaCita);
-        }
 
         if (psicologo.Correo is not null)
         {
             await _correo.EncolarAsync(
                 psicologo.Correo, psicologo.Nombre, asunto,
                 PlantillasCorreo.NuevaCita(psicologo.Nombre, paciente.Nombre, true, cita.FechaInicio, cita.Modalidad, cita.Lugar, cita.Motivo, EnlacePsicologo()),
+                TiposCorreo.NuevaCita);
+        }
+    }
+
+    private async Task NotificarConfirmadaAsync(Cita cita)
+    {
+        var paciente = cita.Paciente!;
+        var psicologo = cita.Psicologo!;
+
+        if (paciente is { Correo: not null, RecordatoriosCorreo: true })
+        {
+            await _correo.EncolarAsync(
+                paciente.Correo, paciente.Nombre, "Tu cita fue confirmada",
+                PlantillasCorreo.CitaConfirmada(paciente.Nombre, psicologo.Nombre, cita.FechaInicio, cita.Modalidad, cita.Lugar, cita.Motivo, EnlacePaciente()),
                 TiposCorreo.NuevaCita);
         }
     }
