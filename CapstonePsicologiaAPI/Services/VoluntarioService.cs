@@ -87,9 +87,27 @@ public class VoluntarioService : IVoluntarioService
         return null;
     }
 
-    public async Task<VoluntarioDto> ObtenerYoAsync(int usuarioId) =>
-        ADto(await _voluntarioData.ObtenerPorUsuarioIdAsync(usuarioId)
-             ?? throw ReglaNegocioException.NoEncontrada("No tienes un perfil de voluntario"));
+    public async Task<VoluntarioDto> ObtenerYoAsync(int usuarioId)
+    {
+        var voluntario = await _voluntarioData.ObtenerPorUsuarioIdAsync(usuarioId);
+
+        if (voluntario is not null)
+            return ADto(voluntario);
+
+        // Cuentas anteriores a la tabla Voluntarios: tienen acceso pero no DNI ni apellidos.
+        var usuario = await _usuarioData.ObtenerPorIdAsync(usuarioId)
+                      ?? throw ReglaNegocioException.NoEncontrada("Cuenta no encontrada");
+
+        return new VoluntarioDto
+        {
+            UsuarioId = usuario.Id,
+            Nombre = usuario.Nombre,
+            Correo = usuario.Correo,
+            Telefono = usuario.Telefono,
+            Activo = usuario.Activo,
+            FechaRegistro = Mapeos.Utc(usuario.FechaRegistro),
+        };
+    }
 
     public async Task<List<VoluntarioDto>> ListarAsync(string? buscar) =>
         (await _voluntarioData.ListarAsync(buscar)).Select(ADto).ToList();
