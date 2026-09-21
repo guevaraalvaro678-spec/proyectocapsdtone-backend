@@ -11,6 +11,9 @@ public class Psicologo
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
 
+    /// <summary>DNI de 8 dígitos. Obligatorio al postular; opcional en los creados a mano por el administrador.</summary>
+    public string? Dni { get; set; }
+
     /// <summary>Hash de la contraseña elegida al postular. Se pasa a la cuenta al aprobar y se borra de aquí.</summary>
     public string? PasswordHash { get; set; }
 

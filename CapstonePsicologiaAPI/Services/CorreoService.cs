@@ -67,10 +67,10 @@ public class CorreoService : ICorreoService
         {
             var roles = datos.Audiencia switch
             {
-                "Usuarios" => new[] { Roles.Usuario },
-                "Psicologos" => new[] { Roles.Psicologo },
+                "Usuarios" => new[] { Roles.Voluntario, Roles.Practicante },
+                "Psicologos" => new[] { Roles.RRHH },
                 "Administradores" => new[] { Roles.SuperAdmin, Roles.Admin },
-                _ => new[] { Roles.Usuario, Roles.Psicologo, Roles.SuperAdmin, Roles.Admin },
+                _ => new[] { Roles.Voluntario, Roles.Practicante, Roles.RRHH, Roles.SuperAdmin, Roles.Admin },
             };
 
             var destinatarios = await _usuarioData.ObtenerDestinatariosAsync(roles, respetarPreferencia: !datos.IncluirSinPreferencia);

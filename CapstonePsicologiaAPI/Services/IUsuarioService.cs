@@ -5,7 +5,6 @@ namespace CapstonePsicologiaAPI.Services;
 public interface IUsuarioService
 {
     /// <summary>Crea un usuario común y devuelve su sesión; null si el correo ya está registrado.</summary>
-    Task<AdminSesionDto?> RegistrarAsync(UsuarioRegistroDto registro);
 
     Task<UsuarioPerfilDto?> ObtenerPerfilAsync(int usuarioId);
 

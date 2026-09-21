@@ -37,36 +37,6 @@ public class UsuarioService : IUsuarioService
         _logger = logger;
     }
 
-    public async Task<AdminSesionDto?> RegistrarAsync(UsuarioRegistroDto registro)
-    {
-        var correo = registro.Correo.Trim().ToLowerInvariant();
-
-        if (await _usuarioData.ExisteCorreoAsync(correo))
-            return null;
-
-        // El rol lo fija el servidor: quien se registra siempre es un usuario común.
-        var usuario = new Usuario
-        {
-            NombreUsuario = correo,
-            Correo = correo,
-            Nombre = registro.Nombre.Trim(),
-            Rol = Roles.Usuario,
-            FechaRegistro = DateTime.UtcNow,
-        };
-        usuario.PasswordHash = _hasher.HashPassword(usuario, registro.Password);
-
-        await _usuarioData.CrearAsync(usuario);
-
-        await _correo.EncolarAsync(
-            correo,
-            usuario.Nombre,
-            "¡Bienvenido/a a Capstone Psicología!",
-            PlantillasCorreo.Bienvenida(usuario.Nombre, $"{_correo.FrontUrl}/mi-espacio"),
-            TiposCorreo.Bienvenida);
-
-        return AdminService.ASesion(usuario, _tokenService);
-    }
-
     public async Task<UsuarioPerfilDto?> ObtenerPerfilAsync(int usuarioId)
     {
         var usuario = await _usuarioData.ObtenerPorIdAsync(usuarioId);
@@ -85,8 +55,6 @@ public class UsuarioService : IUsuarioService
         usuario.Intereses = LimpiarOpcional(datos.Intereses);
         usuario.RecordatoriosCorreo = datos.RecordatoriosCorreo;
         usuario.PreferenciaVirtual = datos.PreferenciaVirtual;
-
-        await _usuarioData.ActualizarAsync(usuario);
 
         return APerfil(usuario);
     }
@@ -209,7 +177,7 @@ public class UsuarioService : IUsuarioService
             return new[] { Roles.SuperAdmin, Roles.Admin };
         }
 
-        return new[] { Roles.Usuario };
+        return new[] { Roles.Voluntario, Roles.Practicante, Roles.RRHH };
     }
 
     /// <summary>Un Admin puede gestionar usuarios y psicólogos; las cuentas de administrador, solo un SuperAdmin.</summary>

@@ -11,6 +11,15 @@ public class UsuarioPerfilActualizarDto
     [StringLength(100)]
     public string? Ubicacion { get; set; }
 
+    [StringLength(150)]
+    public string? Universidad { get; set; }
+
+    [StringLength(100)]
+    public string? Carrera { get; set; }
+
+    [StringLength(30)]
+    public string? Ciclo { get; set; }
+
     [StringLength(200)]
     public string? Intereses { get; set; }
 

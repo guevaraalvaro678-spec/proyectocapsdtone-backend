@@ -21,17 +21,20 @@ public class ColaboradorService : IColaboradorService
 {
     private readonly IColaboradorData _colaboradorData;
     private readonly IUsuarioData _usuarioData;
+    private readonly IVoluntarioData _voluntarioData;
     private readonly IPasswordHasher<Usuario> _hasher;
     private readonly ICorreoService _correo;
 
     public ColaboradorService(
         IColaboradorData colaboradorData,
         IUsuarioData usuarioData,
+        IVoluntarioData voluntarioData,
         IPasswordHasher<Usuario> hasher,
         ICorreoService correo)
     {
         _colaboradorData = colaboradorData;
         _usuarioData = usuarioData;
+        _voluntarioData = voluntarioData;
         _hasher = hasher;
         _correo = correo;
     }
@@ -45,11 +48,16 @@ public class ColaboradorService : IColaboradorService
 
         var existente = await _colaboradorData.ObtenerPorCorreoAsync(correo);
 
+        // El DNI no puede estar en otro perfil (voluntario u otro psicólogo); sí puede ser el de su propia postulación rechazada.
+        if (existente?.Dni != datos.Dni && await _voluntarioData.ExisteDniAsync(datos.Dni))
+            throw ReglaNegocioException.Conflicto("Ese DNI ya está registrado");
+
         if (existente is not null && existente.Estado != EstadosColaborador.Rechazado)
             throw ReglaNegocioException.Conflicto("Ya existe una postulación con ese correo.");
 
         // Quien fue rechazado puede volver a postular: se reutiliza su fila.
         var psicologo = existente ?? new Psicologo { Correo = correo };
+        psicologo.Dni = datos.Dni;
         psicologo.Nombre = datos.Nombre.Trim();
         psicologo.PasswordHash = _hasher.HashPassword(new Usuario(), datos.Password);
         psicologo.Telefono = Limpiar(datos.Telefono);
@@ -141,6 +149,7 @@ public class ColaboradorService : IColaboradorService
     private static ColaboradorDto ADto(Psicologo p) => new()
     {
         Id = p.Id,
+        Dni = p.Dni,
         Nombre = p.Nombre,
         Correo = p.Correo,
         Telefono = p.Telefono,

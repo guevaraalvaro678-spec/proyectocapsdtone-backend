@@ -12,9 +12,32 @@ public static class PlantillasCorreo
     public static string Bienvenida(string nombre, string enlace) =>
         Envolver(
             $"¡Bienvenido/a, {H(PrimerNombre(nombre))}!",
-            "<p>Tu cuenta ya está lista. Desde tu espacio puedes pedir orientación psicológica, ver tus citas y administrar tus preferencias.</p>",
+            "<p>Tu cuenta ya está lista. Desde tu espacio puedes ver tus datos y tus tareas.</p>",
             enlace,
             "Ir a mi espacio");
+
+    public static string BienvenidaVoluntario(string nombre, string correo, string clave, string enlace) =>
+        Envolver(
+            $"¡Gracias por sumarte, {H(PrimerNombre(nombre))}!",
+            "<p>Ya eres parte de nuestro voluntariado. Estos son tus datos de acceso:</p>" +
+            "<table style=\"border-collapse:collapse;margin:12px 0\">" + Fila("Usuario", correo) + Fila("Contraseña temporal", clave) + "</table>" +
+            "<p style=\"color:#6b7280\">Puedes cambiar tu contraseña desde \"¿Olvidaste tu contraseña?\" en la pantalla de inicio de sesión.</p>",
+            enlace,
+            "Iniciar sesión");
+
+    public static string BienvenidaPracticante(string nombre, string enlace) =>
+        Envolver(
+            $"¡Bienvenido/a, {H(PrimerNombre(nombre))}!",
+            "<p>Tu cuenta de practicante ya está lista. Lo primero es enviar el horario de tu universidad desde tu panel: Recursos Humanos lo revisará y luego te asignará tu horario de prácticas.</p>",
+            enlace,
+            "Ir a mi panel");
+
+    public static string HorarioAceptado(string nombre, string enlace) =>
+        Envolver(
+            $"Tu horario fue confirmado, {H(PrimerNombre(nombre))}",
+            "<p>Recursos Humanos revisó tu horario y ya tienes asignado tu horario de prácticas. Puedes verlo confirmado en tu panel.</p>",
+            enlace,
+            "Ver mi horario");
 
     public static string BienvenidaPsicologo(string nombre, string enlace) =>
         Envolver(

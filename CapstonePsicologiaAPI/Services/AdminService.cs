@@ -10,12 +10,14 @@ public class AdminService : IAdminService
     private readonly IAdminData _adminData;
     private readonly IPasswordHasher<Usuario> _hasher;
     private readonly ITokenService _tokenService;
+    private readonly IGoogleAuthService _google;
 
-    public AdminService(IAdminData adminData, IPasswordHasher<Usuario> hasher, ITokenService tokenService)
+    public AdminService(IAdminData adminData, IPasswordHasher<Usuario> hasher, ITokenService tokenService, IGoogleAuthService google)
     {
         _adminData = adminData;
         _hasher = hasher;
         _tokenService = tokenService;
+        _google = google;
     }
 
     /// <summary>Login de cualquier cuenta: administradores (por usuario), usuarios y psicólogos (por correo).</summary>
@@ -36,6 +38,19 @@ public class AdminService : IAdminService
 
         await _adminData.RegistrarAccesoAsync(usuario.Id);
 
+        return ASesion(usuario, _tokenService);
+    }
+
+    public async Task<AdminSesionDto> LoginGoogleAsync(string credential)
+    {
+        var perfil = await _google.ValidarAsync(credential);
+        var usuario = await _adminData.ObtenerPorUsuarioOCorreoAsync(perfil.Correo)
+                      ?? throw ReglaNegocioException.NoEncontrada("No hay una cuenta con ese correo. Regístrate primero en \"Únete\".");
+
+        if (!usuario.Activo)
+            throw ReglaNegocioException.Prohibida("Tu cuenta está desactivada. Contacta al administrador.");
+
+        await _adminData.RegistrarAccesoAsync(usuario.Id);
         return ASesion(usuario, _tokenService);
     }
 

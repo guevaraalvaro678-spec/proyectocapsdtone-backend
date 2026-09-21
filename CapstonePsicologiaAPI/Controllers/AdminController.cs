@@ -28,6 +28,11 @@ public class AdminController : ControllerBase
         return Ok(sesion);
     }
 
+    /// <summary>Iniciar sesión con Google (la cuenta se crea antes desde "Únete").</summary>
+    [HttpPost("google")]
+    public async Task<ActionResult<AdminSesionDto>> LoginGoogle(GoogleCredencialDto datos) =>
+        Ok(await _adminService.LoginGoogleAsync(datos.Credential));
+
     /// <summary>Solo un SuperAdmin logueado puede crear nuevos usuarios.</summary>
     [Authorize(Roles = Roles.SuperAdmin)]
     [HttpPost("registro")]

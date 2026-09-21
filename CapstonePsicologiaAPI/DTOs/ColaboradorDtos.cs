@@ -5,6 +5,9 @@ namespace CapstonePsicologiaAPI.DTOs;
 /// <summary>Postulación pública de un psicólogo colaborador ("Trabaja con nosotros").</summary>
 public class ColaboradorPostulacionDto
 {
+    [Required, RegularExpression(@"^\d{8}$", ErrorMessage = "El DNI debe tener 8 dígitos")]
+    public string Dni { get; set; } = string.Empty;
+
     [Required, StringLength(100, MinimumLength = 2)]
     public string Nombre { get; set; } = string.Empty;
 
@@ -31,6 +34,7 @@ public class ColaboradorPostulacionDto
 public class ColaboradorDto
 {
     public int Id { get; set; }
+    public string? Dni { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
     public string? Telefono { get; set; }

@@ -21,19 +21,6 @@ public class UsuarioController : ControllerBase
     }
 
     // ---- Público ----
-
-    /// <summary>Registro público de un usuario común. Devuelve la sesión, así que queda logueado.</summary>
-    [HttpPost("registro")]
-    public async Task<ActionResult<AdminSesionDto>> Registro(UsuarioRegistroDto registro)
-    {
-        var sesion = await _usuarioService.RegistrarAsync(registro);
-
-        if (sesion is null)
-            return Conflict(new { mensaje = "Ese correo ya está registrado" });
-
-        return StatusCode(StatusCodes.Status201Created, sesion);
-    }
-
     /// <summary>Envía el enlace para restablecer la contraseña. Responde igual exista o no la cuenta.</summary>
     [HttpPost("olvide-password")]
     public async Task<IActionResult> OlvidePassword(RecuperarPasswordDto datos)

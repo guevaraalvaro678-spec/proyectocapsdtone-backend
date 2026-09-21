@@ -17,6 +17,14 @@ public class AppDbContext : DbContext
     public DbSet<CorreoSaliente> Correos => Set<CorreoSaliente>();
     public DbSet<Disponibilidad> Disponibilidades => Set<Disponibilidad>();
     public DbSet<Psicologo> Psicologos => Set<Psicologo>();
+    public DbSet<Voluntario> Voluntarios => Set<Voluntario>();
+    public DbSet<Practicante> Practicantes => Set<Practicante>();
+    public DbSet<BloqueHorario> BloquesHorario => Set<BloqueHorario>();
+    public DbSet<Tarea> Tareas => Set<Tarea>();
+    public DbSet<Marcacion> Marcaciones => Set<Marcacion>();
+    public DbSet<Imagen> Imagenes => Set<Imagen>();
+    public DbSet<Iniciativa> Iniciativas => Set<Iniciativa>();
+    public DbSet<SitioConfig> SitioConfig => Set<SitioConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,6 +115,79 @@ public class AppDbContext : DbContext
             e.Property(p => p.MotivoRechazo).HasMaxLength(500);
             e.HasOne(p => p.Usuario).WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(p => p.Estado);
+            e.Property(p => p.Dni).HasMaxLength(8).IsFixedLength();
+            e.HasIndex(p => p.Dni).IsUnique().HasFilter("[Dni] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<Voluntario>(e =>
+        {
+            e.HasKey(v => v.Dni);
+            e.Property(v => v.Dni).HasMaxLength(8).IsFixedLength();
+            e.Property(v => v.Apellidos).HasMaxLength(100).IsRequired();
+            e.HasOne(v => v.Usuario).WithMany().HasForeignKey(v => v.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(v => v.UsuarioId).IsUnique();
+        });
+
+        modelBuilder.Entity<Practicante>(e =>
+        {
+            e.HasKey(p => p.Dni);
+            e.Property(p => p.Dni).HasMaxLength(8).IsFixedLength();
+            e.Property(p => p.Apellidos).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Universidad).HasMaxLength(150).IsRequired();
+            e.Property(p => p.Carrera).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Ciclo).HasMaxLength(30).IsRequired();
+            e.Property(p => p.DepartamentoPrincipal).HasMaxLength(100).IsRequired();
+            e.Property(p => p.DepartamentoSecundario).HasMaxLength(100).IsRequired();
+            e.Property(p => p.EstadoHorario).HasMaxLength(20).IsRequired();
+            e.Property(p => p.NotaHorario).HasMaxLength(500);
+            e.HasOne(p => p.Usuario).WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(p => p.UsuarioId).IsUnique();
+            e.HasIndex(p => p.EstadoHorario);
+        });
+
+        modelBuilder.Entity<BloqueHorario>(e =>
+        {
+            e.Property(b => b.Tipo).HasMaxLength(20).IsRequired();
+            e.Property(b => b.HoraInicio).HasMaxLength(5).IsRequired();
+            e.Property(b => b.HoraFin).HasMaxLength(5).IsRequired();
+            e.HasOne(b => b.Usuario).WithMany().HasForeignKey(b => b.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(b => new { b.UsuarioId, b.Tipo });
+        });
+
+        modelBuilder.Entity<Tarea>(e =>
+        {
+            e.Property(t => t.Titulo).HasMaxLength(150).IsRequired();
+            e.Property(t => t.Descripcion).HasMaxLength(1000);
+            e.Property(t => t.Estado).HasMaxLength(20).IsRequired();
+            e.HasOne(t => t.Usuario).WithMany().HasForeignKey(t => t.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(t => new { t.UsuarioId, t.Estado });
+        });
+
+        modelBuilder.Entity<Marcacion>(e =>
+        {
+            e.HasOne(m => m.Usuario).WithMany().HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(m => new { m.UsuarioId, m.Entrada });
+        });
+
+        modelBuilder.Entity<Imagen>(e =>
+        {
+            e.Property(i => i.Nombre).HasMaxLength(200).IsRequired();
+            e.Property(i => i.TipoContenido).HasMaxLength(50).IsRequired();
+        });
+
+        modelBuilder.Entity<Iniciativa>(e =>
+        {
+            e.Property(i => i.Titulo).HasMaxLength(150).IsRequired();
+            e.Property(i => i.Texto).HasMaxLength(600).IsRequired();
+            e.Property(i => i.Icono).HasMaxLength(10).IsRequired();
+            e.Property(i => i.Color).HasMaxLength(10).IsRequired();
+            e.HasOne(i => i.Imagen).WithMany().HasForeignKey(i => i.ImagenId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SitioConfig>(e =>
+        {
+            e.Property(c => c.Id).ValueGeneratedNever();
+            e.HasOne(c => c.LogoImagen).WithMany().HasForeignKey(c => c.LogoImagenId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CorreoSaliente>(e =>
