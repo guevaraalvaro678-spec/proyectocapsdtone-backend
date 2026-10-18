@@ -6,7 +6,7 @@ namespace CapstonePsicologiaAPI.Services;
 /// <summary>Contenido HTML de los correos. Todo texto que viene de un usuario se codifica para evitar inyección de HTML.</summary>
 public static class PlantillasCorreo
 {
-    private const string Verde = "#14524a";
+    private const string Verde = "#1b4332";
     private static readonly CultureInfo Cultura = new("es-PE");
 
     public static string Bienvenida(string nombre, string enlace) =>
@@ -15,6 +15,48 @@ public static class PlantillasCorreo
             "<p>Tu cuenta ya está lista. Desde tu espacio puedes ver tus datos y tus tareas.</p>",
             enlace,
             "Ir a mi espacio");
+
+    public static string CuentaCreada(string nombre, string enlace) =>
+        Envolver(
+            $"¡Hola, {H(PrimerNombre(nombre))}!",
+            "<p>Tu cuenta en AMAAC Perú ya está lista. El siguiente paso es completar tu postulación como voluntario/a o practicante.</p>",
+            enlace,
+            "Completar mi postulación");
+
+    public static string PostulacionEnviada(string nombre, string codigo, string tipo, string enlace) =>
+        Envolver(
+            $"Recibimos tu postulación, {H(PrimerNombre(nombre))}",
+            $"<p>Tu postulación <strong>{H(codigo)}</strong> como <strong>{H(tipo.ToLowerInvariant())}</strong> fue registrada. " +
+            "El equipo la revisará y te avisaremos cuando quedes habilitado/a para la entrevista grupal.</p>",
+            enlace,
+            "Ver mi postulación");
+
+    public static string EntrevistaAgendada(string nombre, string sesion, DateTime inicioUtc, string modalidad, string lugar, string enlace) =>
+        Envolver(
+            $"Tu entrevista grupal está agendada, {H(PrimerNombre(nombre))}",
+            "<p>Te asignamos a una sesión de entrevista grupal:</p>" +
+            "<table style=\"border-collapse:collapse;margin:12px 0\">" +
+            Fila("Sesión", sesion) + Fila("Fecha", FechaLima(inicioUtc)) + Fila("Modalidad", modalidad) + Fila("Lugar o enlace", lugar) +
+            "</table><p style=\"color:#6b7280\">Conéctate 5 minutos antes y ten a la mano tu documento de identidad.</p>",
+            enlace,
+            "Ver mi postulación");
+
+    public static string PostulacionAceptada(string nombre, string tipo, string enlace) =>
+        Envolver(
+            $"¡Bienvenido/a a AMAAC Perú, {H(PrimerNombre(nombre))}!",
+            $"<p>Tu postulación fue <strong>aceptada</strong>. Ya formas parte del equipo como <strong>{H(tipo.ToLowerInvariant())}</strong>. " +
+            "Inicia sesión para entrar a tu portal.</p>",
+            enlace,
+            "Ir a mi portal");
+
+    public static string PostulacionNoAdmitida(string nombre, string? nota) =>
+        Envolver(
+            $"Sobre tu postulación, {H(PrimerNombre(nombre))}",
+            "<p>Gracias por tu interés en AMAAC Perú. Luego de la evaluación, en esta oportunidad tu postulación no fue admitida.</p>" +
+            (string.IsNullOrWhiteSpace(nota) ? "" : $"<p><strong>Comentario:</strong> {H(nota)}</p>") +
+            "<p>Puedes volver a postular en una próxima convocatoria.</p>",
+            null,
+            null);
 
     public static string BienvenidaVoluntario(string nombre, string correo, string clave, string enlace) =>
         Envolver(
@@ -57,7 +99,7 @@ public static class PlantillasCorreo
     public static string PostulacionAprobada(string nombre, string enlace) =>
         Envolver(
             $"¡Tu postulación fue aprobada, {H(PrimerNombre(nombre))}!",
-            "<p>Ya eres parte del equipo. Inicia sesión con el correo y la contraseña que registraste para configurar tus horarios y atender a tus pacientes.</p>",
+            "<p>Ya eres parte del equipo. Inicia sesión con el correo y la contraseña que registraste para empezar a participar.</p>",
             enlace,
             "Ir a mi panel");
 
@@ -162,14 +204,14 @@ public static class PlantillasCorreo
         return $"""
             <div style="background:#f8f3e6;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
               <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden">
-                <div style="background:{Verde};padding:18px 24px;color:#ffffff;font-size:18px;font-weight:700">Capstone Psicología</div>
+                <div style="background:{Verde};padding:18px 24px;color:#ffffff;font-size:18px;font-weight:700">AMAAC Perú</div>
                 <div style="padding:24px;line-height:1.55">
                   <h2 style="margin:0 0 12px;color:{Verde}">{titulo}</h2>
                   {contenido}
                   {boton}
                 </div>
                 <div style="padding:14px 24px;background:#f3f4f6;font-size:12px;color:#6b7280">
-                  Este es un mensaje automático. Puedes cambiar tus preferencias de correo desde tu espacio.
+                  Este es un mensaje automático de AMAAC Perú.
                 </div>
               </div>
             </div>

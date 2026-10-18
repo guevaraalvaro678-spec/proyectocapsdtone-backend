@@ -6,7 +6,7 @@ namespace CapstonePsicologiaAPI.Services;
 
 public class EventoService : IEventoService
 {
-    private const int MaximoEnBanner = 8;
+    private const int MaximoEnBanner = 12;
 
     private readonly IEventoData _eventoData;
 
@@ -69,6 +69,7 @@ public class EventoService : IEventoService
         evento.Modalidad = datos.Modalidad;
         evento.ImagenUrl = string.IsNullOrWhiteSpace(datos.ImagenUrl) ? null : datos.ImagenUrl.Trim();
         evento.Publicado = datos.Publicado;
+        evento.Tipo = datos.Tipo;
     }
 
     /// <summary>El front envía la hora en UTC; si llegara sin zona se toma como UTC, sin conversiones.</summary>
@@ -85,6 +86,7 @@ public class EventoService : IEventoService
         Lugar = e.Lugar,
         Modalidad = e.Modalidad,
         ImagenUrl = e.ImagenUrl,
+        Tipo = e.Tipo,
         Publicado = e.Publicado,
     };
 }

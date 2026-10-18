@@ -12,16 +12,23 @@ namespace CapstonePsicologiaAPI.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
+    private readonly IDashboardOngService _dashboardOngService;
 
-    public DashboardController(IDashboardService dashboardService)
+    public DashboardController(IDashboardService dashboardService, IDashboardOngService dashboardOngService)
     {
         _dashboardService = dashboardService;
+        _dashboardOngService = dashboardOngService;
     }
 
-    /// <summary>Resumen real del sistema para el dashboard del administrador.</summary>
+    /// <summary>Resumen del módulo de psicología anterior (el front ya no lo usa).</summary>
     [HttpGet]
     public async Task<ActionResult<DashboardDto>> Obtener()
     {
         return Ok(await _dashboardService.ObtenerAsync());
     }
+
+    /// <summary>Indicadores de la ONG: selección, miembros, donaciones y próximas entrevistas.</summary>
+    [HttpGet("ong")]
+    public async Task<ActionResult<DashboardOngDto>> ObtenerOng() =>
+        Ok(await _dashboardOngService.ObtenerAsync());
 }

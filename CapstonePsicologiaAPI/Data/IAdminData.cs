@@ -12,4 +12,5 @@ public interface IAdminData
 
     /// <summary>Anota la fecha del último inicio de sesión.</summary>
     Task RegistrarAccesoAsync(int usuarioId);
+    Task ActualizarPasswordAsync(int usuarioId, string passwordHash);
 }

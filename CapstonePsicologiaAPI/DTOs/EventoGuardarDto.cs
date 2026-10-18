@@ -24,8 +24,11 @@ public class EventoGuardarDto
     public string Modalidad { get; set; } = ModalidadesEvento.Presencial;
 
     [StringLength(500)]
-    [RegularExpression(@"^https?://\S+$", ErrorMessage = "La imagen debe ser una dirección http o https")]
+    [RegularExpression(@"^(https?://\S+|/api/imagen/\d+)$", ErrorMessage = "La imagen debe ser una dirección http o https, o una imagen subida")]
     public string? ImagenUrl { get; set; }
 
     public bool Publicado { get; set; } = true;
+
+    [RegularExpression("^(Campana|Evento)$", ErrorMessage = "Tipo no válido")]
+    public string Tipo { get; set; } = TiposEvento.Evento;
 }

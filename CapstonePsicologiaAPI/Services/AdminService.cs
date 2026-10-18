@@ -26,11 +26,16 @@ public class AdminService : IAdminService
         var nombre = Normalizar(login.Usuario);
         var usuario = await _adminData.ObtenerPorUsuarioOCorreoAsync(nombre);
 
-        if (usuario is null ||
-            _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, login.Password) == PasswordVerificationResult.Failed)
-        {
+        var resultado = usuario is null
+            ? PasswordVerificationResult.Failed
+            : _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, login.Password);
+
+        if (usuario is null || resultado == PasswordVerificationResult.Failed)
             return null;
-        }
+
+        // Cuenta con el hash antiguo: se vuelve a guardar en Base64.
+        if (resultado == PasswordVerificationResult.SuccessRehashNeeded)
+            await _adminData.ActualizarPasswordAsync(usuario.Id, _hasher.HashPassword(usuario, login.Password));
 
         // Solo se avisa que la cuenta está desactivada a quien ya demostró conocer la contraseña.
         if (!usuario.Activo)

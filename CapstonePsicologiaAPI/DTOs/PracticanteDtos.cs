@@ -54,6 +54,14 @@ public class BloqueHorarioDto
 
     [Required, RegularExpression(@"^([01]\d|2[0-3]):[0-5]\d$", ErrorMessage = "Hora inválida (HH:mm)")]
     public string HoraFin { get; set; } = string.Empty;
+
+    /// <summary>Solo en el horario de prácticas: Presencial o Virtual.</summary>
+    [RegularExpression("^(Presencial|Virtual)$", ErrorMessage = "Modalidad no válida")]
+    public string? Modalidad { get; set; }
+
+    /// <summary>Sede o plataforma de trabajo.</summary>
+    [StringLength(200)]
+    public string? Lugar { get; set; }
 }
 
 /// <summary>El practicante envía los bloques de su horario de la universidad.</summary>
@@ -91,6 +99,7 @@ public class PracticanteDto
     public string DepartamentoSecundario { get; set; } = string.Empty;
     public string EstadoHorario { get; set; } = string.Empty;
     public string? NotaHorario { get; set; }
+    public bool HorarioConfirmado { get; set; }
     public DateTime? FechaEnvioHorario { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaRegistro { get; set; }

@@ -36,6 +36,12 @@ public class PracticanteController : ControllerBase
     public async Task<ActionResult<PracticanteDto>> EnviarHorario([FromBody] HorarioEnviarDto datos) =>
         Ok(await _practicanteService.EnviarHorarioAsync(UsuarioId(), datos));
 
+    /// <summary>El practicante confirma el horario de prácticas asignado.</summary>
+    [Authorize(Roles = Roles.Practicante)]
+    [HttpPut("yo/horario/confirmar")]
+    public async Task<ActionResult<PracticanteDto>> ConfirmarHorario() =>
+        Ok(await _practicanteService.ConfirmarHorarioAsync(UsuarioId()));
+
     [Authorize(Roles = RolesGestion)]
     [HttpGet]
     public async Task<ActionResult<List<PracticanteDto>>> Listar([FromQuery] string? estado = null, [FromQuery] string? buscar = null) =>

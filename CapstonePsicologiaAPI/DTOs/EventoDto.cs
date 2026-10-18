@@ -9,5 +9,6 @@ public class EventoDto
     public string Lugar { get; set; } = string.Empty;
     public string Modalidad { get; set; } = string.Empty;
     public string? ImagenUrl { get; set; }
+    public string Tipo { get; set; } = string.Empty;
     public bool Publicado { get; set; }
 }

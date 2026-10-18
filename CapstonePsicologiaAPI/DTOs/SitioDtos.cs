@@ -20,6 +20,15 @@ public class IniciativaDto
     public string? ImagenUrl { get; set; }
     public int Orden { get; set; }
     public bool Activa { get; set; }
+
+    /// <summary>Pendiente, Aprobada o Rechazada (las que proponen los miembros empiezan pendientes).</summary>
+    public string Estado { get; set; } = string.Empty;
+    public string? MotivoRechazo { get; set; }
+
+    /// <summary>Quién la propuso; null si la creó el administrador.</summary>
+    public string? CreadaPorNombre { get; set; }
+    public string? CreadaPorRol { get; set; }
+    public DateTime FechaCreacion { get; set; }
 }
 
 public class IniciativaGuardarDto

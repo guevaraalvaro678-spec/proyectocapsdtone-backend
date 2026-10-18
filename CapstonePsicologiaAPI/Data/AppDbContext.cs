@@ -25,6 +25,12 @@ public class AppDbContext : DbContext
     public DbSet<Imagen> Imagenes => Set<Imagen>();
     public DbSet<Iniciativa> Iniciativas => Set<Iniciativa>();
     public DbSet<SitioConfig> SitioConfig => Set<SitioConfig>();
+    public DbSet<Postulacion> Postulaciones => Set<Postulacion>();
+    public DbSet<SesionEntrevista> SesionesEntrevista => Set<SesionEntrevista>();
+    public DbSet<Archivo> Archivos => Set<Archivo>();
+    public DbSet<Donacion> Donaciones => Set<Donacion>();
+    public DbSet<DonacionArticulo> DonacionArticulos => Set<DonacionArticulo>();
+    public DbSet<Noticia> Noticias => Set<Noticia>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +65,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Lugar).HasMaxLength(150).IsRequired();
             e.Property(x => x.Modalidad).HasMaxLength(20).IsRequired();
             e.Property(x => x.ImagenUrl).HasMaxLength(500);
+            e.Property(x => x.Tipo).HasMaxLength(20).IsRequired().HasDefaultValue(TiposEvento.Evento);
             e.HasIndex(x => x.FechaInicio);
         });
 
@@ -150,6 +157,8 @@ public class AppDbContext : DbContext
             e.Property(b => b.Tipo).HasMaxLength(20).IsRequired();
             e.Property(b => b.HoraInicio).HasMaxLength(5).IsRequired();
             e.Property(b => b.HoraFin).HasMaxLength(5).IsRequired();
+            e.Property(b => b.Modalidad).HasMaxLength(20);
+            e.Property(b => b.Lugar).HasMaxLength(200);
             e.HasOne(b => b.Usuario).WithMany().HasForeignKey(b => b.UsuarioId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(b => new { b.UsuarioId, b.Tipo });
         });
@@ -181,6 +190,9 @@ public class AppDbContext : DbContext
             e.Property(i => i.Texto).HasMaxLength(600).IsRequired();
             e.Property(i => i.Icono).HasMaxLength(10).IsRequired();
             e.Property(i => i.Color).HasMaxLength(10).IsRequired();
+            e.Property(i => i.Estado).HasMaxLength(20).IsRequired().HasDefaultValue(EstadosIniciativa.Aprobada);
+            e.Property(i => i.MotivoRechazo).HasMaxLength(500);
+            e.HasOne(i => i.CreadaPor).WithMany().HasForeignKey(i => i.CreadaPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(i => i.Imagen).WithMany().HasForeignKey(i => i.ImagenId).OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -188,6 +200,78 @@ public class AppDbContext : DbContext
         {
             e.Property(c => c.Id).ValueGeneratedNever();
             e.HasOne(c => c.LogoImagen).WithMany().HasForeignKey(c => c.LogoImagenId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Postulacion>(e =>
+        {
+            e.Property(p => p.Codigo).HasMaxLength(20).IsRequired();
+            e.HasIndex(p => p.Codigo).IsUnique();
+            e.Property(p => p.Tipo).HasMaxLength(20).IsRequired();
+            e.Property(p => p.Dni).HasMaxLength(8).IsFixedLength().IsRequired();
+            e.Property(p => p.Nombres).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Apellidos).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Direccion).HasMaxLength(200).IsRequired();
+            e.Property(p => p.Distrito).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Provincia).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Telefono).HasMaxLength(30).IsRequired();
+            e.Property(p => p.Universidad).HasMaxLength(150);
+            e.Property(p => p.Carrera).HasMaxLength(100);
+            e.Property(p => p.Ciclo).HasMaxLength(30);
+            e.Property(p => p.Departamento).HasMaxLength(100).IsRequired();
+            e.Property(p => p.DepartamentoSecundario).HasMaxLength(100);
+            e.Property(p => p.IniciativaDescripcion).HasMaxLength(600);
+            e.Property(p => p.Estado).HasMaxLength(30).IsRequired();
+            e.Property(p => p.NotaEvaluacion).HasMaxLength(600);
+            e.HasOne(p => p.Usuario).WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(p => p.CvArchivo).WithMany().HasForeignKey(p => p.CvArchivoId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(p => p.SesionEntrevista).WithMany().HasForeignKey(p => p.SesionEntrevistaId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(p => p.Estado);
+            e.HasIndex(p => p.UsuarioId);
+        });
+
+        modelBuilder.Entity<SesionEntrevista>(e =>
+        {
+            e.Property(s => s.Codigo).HasMaxLength(20).IsRequired();
+            e.HasIndex(s => s.Codigo).IsUnique();
+            e.Property(s => s.Nombre).HasMaxLength(150).IsRequired();
+            e.Property(s => s.Modalidad).HasMaxLength(20).IsRequired();
+            e.Property(s => s.LugarOEnlace).HasMaxLength(300).IsRequired();
+            e.Property(s => s.Estado).HasMaxLength(20).IsRequired();
+            e.HasIndex(s => s.Inicio);
+        });
+
+        modelBuilder.Entity<Archivo>(e =>
+        {
+            e.Property(a => a.Nombre).HasMaxLength(200).IsRequired();
+            e.Property(a => a.TipoContenido).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<Donacion>(e =>
+        {
+            e.Property(d => d.Codigo).HasMaxLength(20).IsRequired();
+            e.HasIndex(d => d.Codigo).IsUnique();
+            e.Property(d => d.DonanteNombre).HasMaxLength(150).IsRequired();
+            e.Property(d => d.Telefono).HasMaxLength(30).IsRequired();
+            e.Property(d => d.Estado).HasMaxLength(30).IsRequired();
+            e.Property(d => d.Observaciones).HasMaxLength(500);
+            e.HasMany(d => d.Articulos).WithOne().HasForeignKey(a => a.DonacionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(d => d.Estado);
+        });
+
+        modelBuilder.Entity<DonacionArticulo>(e =>
+        {
+            e.Property(a => a.Categoria).HasMaxLength(30).IsRequired();
+            e.Property(a => a.Nombre).HasMaxLength(150).IsRequired();
+        });
+
+        modelBuilder.Entity<Noticia>(e =>
+        {
+            e.Property(n => n.Titulo).HasMaxLength(200).IsRequired();
+            e.Property(n => n.Resumen).HasMaxLength(400).IsRequired();
+            e.Property(n => n.Contenido).HasMaxLength(4000);
+            e.Property(n => n.Estado).HasMaxLength(20).IsRequired();
+            e.HasOne(n => n.Imagen).WithMany().HasForeignKey(n => n.ImagenId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(n => new { n.Estado, n.Fecha });
         });
 
         modelBuilder.Entity<CorreoSaliente>(e =>

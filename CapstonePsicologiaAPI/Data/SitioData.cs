@@ -13,6 +13,7 @@ public interface ISitioData
     Task GuardarAsync();
 
     Task<List<Iniciativa>> ListarIniciativasAsync(bool soloActivas);
+    Task<List<Iniciativa>> ListarIniciativasDeUsuarioAsync(int usuarioId);
     Task<Iniciativa?> ObtenerIniciativaAsync(int id);
     Task CrearIniciativaAsync(Iniciativa iniciativa);
     Task EliminarIniciativaAsync(Iniciativa iniciativa);
@@ -44,6 +45,7 @@ public class SitioData : ISitioData
             return;
 
         var enUso = await _db.Iniciativas.AnyAsync(i => i.ImagenId == id)
+                    || await _db.Noticias.AnyAsync(n => n.ImagenId == id)
                     || await _db.SitioConfig.AnyAsync(c => c.LogoImagenId == id);
 
         if (!enUso)
@@ -68,16 +70,20 @@ public class SitioData : ISitioData
 
     public Task<List<Iniciativa>> ListarIniciativasAsync(bool soloActivas)
     {
-        var consulta = _db.Iniciativas.AsNoTracking().AsQueryable();
+        var consulta = _db.Iniciativas.AsNoTracking().Include(i => i.CreadaPor).AsQueryable();
 
         if (soloActivas)
-            consulta = consulta.Where(i => i.Activa);
+            consulta = consulta.Where(i => i.Activa && i.Estado == EstadosIniciativa.Aprobada);
 
-        return consulta.OrderBy(i => i.Orden).ThenBy(i => i.Id).ToListAsync();
+        // Las pendientes de revisión van primero.
+        return consulta.OrderBy(i => i.Estado == EstadosIniciativa.Pendiente ? 0 : 1).ThenBy(i => i.Orden).ThenBy(i => i.Id).ToListAsync();
     }
 
+    public Task<List<Iniciativa>> ListarIniciativasDeUsuarioAsync(int usuarioId) =>
+        _db.Iniciativas.AsNoTracking().Where(i => i.CreadaPorUsuarioId == usuarioId).OrderByDescending(i => i.FechaCreacion).ToListAsync();
+
     public Task<Iniciativa?> ObtenerIniciativaAsync(int id) =>
-        _db.Iniciativas.FirstOrDefaultAsync(i => i.Id == id);
+        _db.Iniciativas.Include(i => i.CreadaPor).FirstOrDefaultAsync(i => i.Id == id);
 
     public async Task CrearIniciativaAsync(Iniciativa iniciativa)
     {

@@ -26,6 +26,15 @@ public class Iniciativa
     public int? ImagenId { get; set; }
     public Imagen? Imagen { get; set; }
 
+    /// <summary>Quién la propuso: null si la creó el administrador.</summary>
+    public int? CreadaPorUsuarioId { get; set; }
+    public Usuario? CreadaPor { get; set; }
+
+    /// <summary>Pendiente, Aprobada o Rechazada. Solo las aprobadas y activas se ven en el sitio.</summary>
+    public string Estado { get; set; } = EstadosIniciativa.Aprobada;
+    public string? MotivoRechazo { get; set; }
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
     public int Orden { get; set; }
     public bool Activa { get; set; } = true;
 }
@@ -44,4 +53,11 @@ public class SitioConfig
     public int Id { get; set; } = 1;
     public int? LogoImagenId { get; set; }
     public Imagen? LogoImagen { get; set; }
+}
+
+public static class EstadosIniciativa
+{
+    public const string Pendiente = "Pendiente";
+    public const string Aprobada = "Aprobada";
+    public const string Rechazada = "Rechazada";
 }

@@ -11,6 +11,9 @@ public class Evento
     public string Modalidad { get; set; } = ModalidadesEvento.Presencial;
     public string? ImagenUrl { get; set; }
 
+    /// <summary>Campaña (aparece en "Nuestras campañas") o Evento (aparece en "Próximos eventos").</summary>
+    public string Tipo { get; set; } = TiposEvento.Evento;
+
     /// <summary>Solo los eventos publicados aparecen en el sitio público.</summary>
     public bool Publicado { get; set; } = true;
 
@@ -22,4 +25,10 @@ public static class ModalidadesEvento
     public const string Presencial = "Presencial";
     public const string Virtual = "Virtual";
     public const string Mixta = "Mixta";
+}
+
+public static class TiposEvento
+{
+    public const string Campana = "Campana";
+    public const string Evento = "Evento";
 }

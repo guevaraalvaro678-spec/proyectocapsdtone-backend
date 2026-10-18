@@ -21,6 +21,9 @@ public class Practicante
 
     public string EstadoHorario { get; set; } = EstadosHorario.SinEnviar;
     public string? NotaHorario { get; set; }
+
+    /// <summary>El practicante confirmó el horario de prácticas asignado.</summary>
+    public bool HorarioConfirmado { get; set; }
     public DateTime? FechaEnvioHorario { get; set; }
     public DateTime? FechaRevisionHorario { get; set; }
     public int? RevisadoPorUsuarioId { get; set; }
@@ -51,6 +54,10 @@ public class BloqueHorario
     /// <summary>Formato HH:mm, hora de Lima.</summary>
     public string HoraInicio { get; set; } = string.Empty;
     public string HoraFin { get; set; } = string.Empty;
+
+    /// <summary>Solo en el horario de prácticas: Presencial o Virtual, y la sede o plataforma.</summary>
+    public string? Modalidad { get; set; }
+    public string? Lugar { get; set; }
 }
 
 public static class TiposBloque

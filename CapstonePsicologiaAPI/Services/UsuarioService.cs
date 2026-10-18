@@ -177,7 +177,7 @@ public class UsuarioService : IUsuarioService
             return new[] { Roles.SuperAdmin, Roles.Admin };
         }
 
-        return new[] { Roles.Voluntario, Roles.Practicante, Roles.RRHH };
+        return new[] { Roles.Voluntario, Roles.Practicante, Roles.RRHH, Roles.Postulante };
     }
 
     /// <summary>Un Admin puede gestionar usuarios y psicólogos; las cuentas de administrador, solo un SuperAdmin.</summary>

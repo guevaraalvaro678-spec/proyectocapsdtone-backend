@@ -29,6 +29,13 @@ public class AdminData : IAdminData
         await _db.SaveChangesAsync();
     }
 
+    public async Task ActualizarPasswordAsync(int usuarioId, string passwordHash)
+    {
+        await _db.Usuarios
+            .Where(u => u.Id == usuarioId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.PasswordHash, passwordHash));
+    }
+
     public async Task RegistrarAccesoAsync(int usuarioId)
     {
         await _db.Usuarios

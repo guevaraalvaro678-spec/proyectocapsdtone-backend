@@ -14,6 +14,11 @@ public interface ISitioService
     Task<IniciativaDto> CrearIniciativaAsync(IniciativaGuardarDto datos);
     Task<IniciativaDto> ActualizarIniciativaAsync(int id, IniciativaGuardarDto datos);
     Task EliminarIniciativaAsync(int id);
+
+    /// <summary>Iniciativas que propuso un voluntario o practicante.</summary>
+    Task<List<IniciativaDto>> ListarMiasAsync(int usuarioId);
+    Task<IniciativaDto> ProponerAsync(int usuarioId, IniciativaPropuestaDto datos);
+    Task<IniciativaDto> RevisarAsync(int id, IniciativaRevisionDto datos);
 }
 
 /// <summary>Contenido editable del sitio público: logo e iniciativas, con imágenes subidas por el administrador.</summary>
@@ -124,6 +129,38 @@ public class SitioService : ISitioService
         await _sitioData.EliminarImagenAsync(imagenId);
     }
 
+    public async Task<List<IniciativaDto>> ListarMiasAsync(int usuarioId) =>
+        (await _sitioData.ListarIniciativasDeUsuarioAsync(usuarioId)).Select(ADto).ToList();
+
+    public async Task<IniciativaDto> ProponerAsync(int usuarioId, IniciativaPropuestaDto datos)
+    {
+        var iniciativa = new Iniciativa
+        {
+            Titulo = datos.Titulo.Trim(),
+            Texto = datos.Texto.Trim(),
+            Icono = "💡",
+            Color = ColoresIniciativa.Verde,
+            CreadaPorUsuarioId = usuarioId,
+            Estado = EstadosIniciativa.Pendiente,
+            Orden = 100,
+        };
+
+        await _sitioData.CrearIniciativaAsync(iniciativa);
+        return ADto(iniciativa);
+    }
+
+    /// <summary>Aprobada: aparece en el sitio público. Rechazada: queda visible solo para quien la propuso, con el motivo.</summary>
+    public async Task<IniciativaDto> RevisarAsync(int id, IniciativaRevisionDto datos)
+    {
+        var iniciativa = await _sitioData.ObtenerIniciativaAsync(id)
+                         ?? throw ReglaNegocioException.NoEncontrada("Iniciativa no encontrada");
+
+        iniciativa.Estado = datos.Estado;
+        iniciativa.MotivoRechazo = datos.Estado == EstadosIniciativa.Rechazada && !string.IsNullOrWhiteSpace(datos.Motivo) ? datos.Motivo.Trim() : null;
+        await _sitioData.GuardarAsync();
+        return ADto(iniciativa);
+    }
+
     private async Task ValidarImagenAsync(int? imagenId)
     {
         if (imagenId is not null && await _sitioData.ObtenerImagenAsync(imagenId.Value) is null)
@@ -154,5 +191,10 @@ public class SitioService : ISitioService
         ImagenUrl = Url(i.ImagenId),
         Orden = i.Orden,
         Activa = i.Activa,
+        Estado = i.Estado,
+        MotivoRechazo = i.MotivoRechazo,
+        CreadaPorNombre = i.CreadaPor?.Nombre,
+        CreadaPorRol = i.CreadaPor?.Rol,
+        FechaCreacion = Mapeos.Utc(i.FechaCreacion),
     };
 }

@@ -12,6 +12,7 @@ public interface IPracticanteService
     Task<PracticanteDto> EnviarHorarioAsync(int usuarioId, HorarioEnviarDto datos);
     Task<List<PracticanteDto>> ListarAsync(string? estadoHorario, string? buscar);
     Task<PracticanteDto> RevisarHorarioAsync(int usuarioId, HorarioRevisionDto datos, int revisorId);
+    Task<PracticanteDto> ConfirmarHorarioAsync(int usuarioId);
 }
 
 /// <summary>
@@ -138,6 +139,8 @@ public class PracticanteService : IPracticanteService
                 throw ReglaNegocioException.Invalida("Para aceptar, asigna el horario de prácticas");
 
             ValidarBloques(datos.HorarioPracticas);
+            ValidarReglasPracticas(datos.HorarioPracticas);
+            practicante.HorarioConfirmado = false;
             await _practicanteData.ReemplazarBloquesAsync(usuarioId, TiposBloque.Practicas, ABloques(usuarioId, TiposBloque.Practicas, datos.HorarioPracticas));
         }
 
@@ -156,6 +159,36 @@ public class PracticanteService : IPracticanteService
         }
 
         return (await ADtosAsync(new[] { practicante }))[0];
+    }
+
+    /// <summary>El practicante confirma el horario de prácticas que le asignaron.</summary>
+    public async Task<PracticanteDto> ConfirmarHorarioAsync(int usuarioId)
+    {
+        var practicante = await ObtenerAsync(usuarioId);
+
+        if (practicante.EstadoHorario != EstadosHorario.Aceptado)
+            throw ReglaNegocioException.Invalida("Todavía no tienes un horario de prácticas asignado");
+
+        practicante.HorarioConfirmado = true;
+        await _practicanteData.GuardarAsync();
+        return (await ADtosAsync(new[] { practicante }))[0];
+    }
+
+    /// <summary>Reglas del horario de prácticas: lunes a sábado, máximo 5 h por día y 30 h por semana.</summary>
+    private static void ValidarReglasPracticas(List<BloqueHorarioDto> bloques)
+    {
+        if (bloques.Any(b => b.DiaSemana == 7))
+            throw ReglaNegocioException.Invalida("Las prácticas son de lunes a sábado");
+
+        static double Horas(BloqueHorarioDto b) => (TimeSpan.Parse(b.HoraFin) - TimeSpan.Parse(b.HoraInicio)).TotalHours;
+
+        var porDia = bloques.GroupBy(b => b.DiaSemana).Select(g => new { Dia = g.Key, Horas = g.Sum(Horas) });
+        if (porDia.FirstOrDefault(d => d.Horas > 5) is { } excedido)
+            throw ReglaNegocioException.Invalida($"Máximo 5 horas por día (el día {excedido.Dia} tiene {excedido.Horas:0.#} h)");
+
+        var total = bloques.Sum(Horas);
+        if (total > 30)
+            throw ReglaNegocioException.Invalida($"Máximo 30 horas por semana (asignaste {total:0.#} h)");
     }
 
     private async Task<Practicante> ObtenerAsync(int usuarioId) =>
@@ -179,6 +212,8 @@ public class PracticanteService : IPracticanteService
             DiaSemana = b.DiaSemana,
             HoraInicio = b.HoraInicio,
             HoraFin = b.HoraFin,
+            Modalidad = tipo == TiposBloque.Practicas ? b.Modalidad : null,
+            Lugar = tipo == TiposBloque.Practicas && !string.IsNullOrWhiteSpace(b.Lugar) ? b.Lugar.Trim() : null,
         }).ToList();
 
     private async Task<List<PracticanteDto>> ADtosAsync(IReadOnlyCollection<Practicante> practicantes)
@@ -188,7 +223,7 @@ public class PracticanteService : IPracticanteService
         static List<BloqueHorarioDto> Filtrar(IEnumerable<BloqueHorario> todos, int id, string tipo) =>
             todos.Where(b => b.UsuarioId == id && b.Tipo == tipo)
                 .OrderBy(b => b.DiaSemana).ThenBy(b => b.HoraInicio)
-                .Select(b => new BloqueHorarioDto { DiaSemana = b.DiaSemana, HoraInicio = b.HoraInicio, HoraFin = b.HoraFin })
+                .Select(b => new BloqueHorarioDto { DiaSemana = b.DiaSemana, HoraInicio = b.HoraInicio, HoraFin = b.HoraFin, Modalidad = b.Modalidad, Lugar = b.Lugar })
                 .ToList();
 
         return practicantes.Select(p => new PracticanteDto
@@ -206,6 +241,7 @@ public class PracticanteService : IPracticanteService
             DepartamentoSecundario = p.DepartamentoSecundario,
             EstadoHorario = p.EstadoHorario,
             NotaHorario = p.NotaHorario,
+            HorarioConfirmado = p.HorarioConfirmado,
             FechaEnvioHorario = p.FechaEnvioHorario is null ? null : Mapeos.Utc(p.FechaEnvioHorario.Value),
             Activo = p.Usuario.Activo,
             FechaRegistro = Mapeos.Utc(p.FechaRegistro),

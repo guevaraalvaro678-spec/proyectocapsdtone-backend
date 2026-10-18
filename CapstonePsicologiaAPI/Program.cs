@@ -14,10 +14,18 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
 
 // Add services to the container.
 
+// La base es serverless (plan gratis de Azure): se pausa sola y tarda hasta un minuto en despertar.
+// Mientras despierta rechaza conexiones (40613, 40925), así que se reintenta en vez de fallar.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(
+            maxRetryCount: 6,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: new[] { 40613, 40925 })));
 
-builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
+// Contraseñas en Base64 (ver ContrasenaBase64).
+builder.Services.AddScoped<IPasswordHasher<Usuario>, ContrasenaBase64>();
 builder.Services.AddScoped<IAdminData, AdminData>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.Configure<GoogleOpciones>(builder.Configuration.GetSection("Google"));
@@ -37,6 +45,17 @@ builder.Services.AddScoped<IColaboradorData, ColaboradorData>();
 builder.Services.AddScoped<IVoluntarioData, VoluntarioData>();
 builder.Services.AddScoped<ISitioData, SitioData>();
 builder.Services.AddScoped<ISitioService, SitioService>();
+builder.Services.AddScoped<ICuentaService, CuentaService>();
+builder.Services.AddScoped<IPostulacionData, PostulacionData>();
+builder.Services.AddScoped<ISesionEntrevistaData, SesionEntrevistaData>();
+builder.Services.AddScoped<IArchivoData, ArchivoData>();
+builder.Services.AddScoped<IPostulacionService, PostulacionService>();
+builder.Services.AddScoped<ISesionEntrevistaService, SesionEntrevistaService>();
+builder.Services.AddScoped<IDonacionData, DonacionData>();
+builder.Services.AddScoped<IDonacionService, DonacionService>();
+builder.Services.AddScoped<INoticiaData, NoticiaData>();
+builder.Services.AddScoped<INoticiaService, NoticiaService>();
+builder.Services.AddScoped<IDashboardOngService, DashboardOngService>();
 builder.Services.AddScoped<IVoluntarioService, VoluntarioService>();
 builder.Services.AddScoped<IPracticanteData, PracticanteData>();
 builder.Services.AddScoped<IPracticanteService, PracticanteService>();

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CapstonePsicologiaAPI.DTOs;
 using CapstonePsicologiaAPI.Models;
 using CapstonePsicologiaAPI.Services;
@@ -69,4 +70,22 @@ public class SitioController : ControllerBase
         await _sitioService.EliminarIniciativaAsync(id);
         return NoContent();
     }
+
+    /// <summary>Iniciativas que propuso el voluntario o practicante que inició sesión.</summary>
+    [Authorize(Roles = $"{Roles.Voluntario},{Roles.Practicante}")]
+    [HttpGet("api/iniciativa/mias")]
+    public async Task<ActionResult<List<IniciativaDto>>> Mias() =>
+        Ok(await _sitioService.ListarMiasAsync(UsuarioId()));
+
+    [Authorize(Roles = $"{Roles.Voluntario},{Roles.Practicante}")]
+    [HttpPost("api/iniciativa/propuesta")]
+    public async Task<ActionResult<IniciativaDto>> Proponer([FromBody] IniciativaPropuestaDto datos) =>
+        StatusCode(StatusCodes.Status201Created, await _sitioService.ProponerAsync(UsuarioId(), datos));
+
+    [Authorize(Roles = RolesAdmin)]
+    [HttpPut("api/iniciativa/{id:int}/revision")]
+    public async Task<ActionResult<IniciativaDto>> Revisar(int id, [FromBody] IniciativaRevisionDto datos) =>
+        Ok(await _sitioService.RevisarAsync(id, datos));
+
+    private int UsuarioId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

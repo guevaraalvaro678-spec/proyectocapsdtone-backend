@@ -22,6 +22,39 @@ namespace CapstonePsicologiaAPI.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Archivo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte[]>("Datos")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SubidoPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TipoContenido")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Archivos");
+                });
+
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.BloqueHorario", b =>
                 {
                     b.Property<int>("Id")
@@ -42,6 +75,14 @@ namespace CapstonePsicologiaAPI.Migrations
                         .IsRequired()
                         .HasMaxLength(5)
                         .HasColumnType("nvarchar(5)");
+
+                    b.Property<string>("Lugar")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Modalidad")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
@@ -254,6 +295,85 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.ToTable("Disponibilidades");
                 });
 
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Donacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("DonanteNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Estado");
+
+                    b.ToTable("Donaciones");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.DonacionArticulo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("DonacionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DonacionId");
+
+                    b.ToTable("DonacionArticulos");
+                });
+
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.Evento", b =>
                 {
                     b.Property<int>("Id")
@@ -289,6 +409,13 @@ namespace CapstonePsicologiaAPI.Migrations
 
                     b.Property<bool>("Publicado")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Evento");
 
                     b.Property<string>("Titulo")
                         .IsRequired()
@@ -348,6 +475,19 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<int?>("CreadaPorUsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Aprobada");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Icono")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -355,6 +495,10 @@ namespace CapstonePsicologiaAPI.Migrations
 
                     b.Property<int?>("ImagenId")
                         .HasColumnType("int");
+
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Orden")
                         .HasColumnType("int");
@@ -370,6 +514,8 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreadaPorUsuarioId");
 
                     b.HasIndex("ImagenId");
 
@@ -398,6 +544,173 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.HasIndex("UsuarioId", "Entrada");
 
                     b.ToTable("Marcaciones");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Noticia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Contenido")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ImagenId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Resumen")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImagenId");
+
+                    b.HasIndex("Estado", "Fecha");
+
+                    b.ToTable("Noticias");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Postulacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Carrera")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Ciclo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("CvArchivoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Departamento")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DepartamentoSecundario")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Distrito")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Dni")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nchar(8)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaEnvio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaNacimiento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IniciativaDescripcion")
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
+                    b.Property<string>("Nombres")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NotaEvaluacion")
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
+                    b.Property<bool>("ParticipaIniciativa")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Provincia")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("SesionEntrevistaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Universidad")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("CvArchivoId");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("SesionEntrevistaId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Postulaciones");
                 });
 
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.Practicante", b =>
@@ -445,6 +758,9 @@ namespace CapstonePsicologiaAPI.Migrations
 
                     b.Property<DateTime?>("FechaRevisionHorario")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("HorarioConfirmado")
+                        .HasColumnType("bit");
 
                     b.Property<string>("NotaHorario")
                         .HasMaxLength(500)
@@ -550,6 +866,61 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Psicologos");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.SesionEntrevista", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Cupo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Fin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Inicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LugarOEnlace")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Modalidad")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Inicio");
+
+                    b.ToTable("SesionesEntrevista");
                 });
 
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.SitioConfig", b =>
@@ -802,12 +1173,28 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.Navigation("Psicologo");
                 });
 
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.DonacionArticulo", b =>
+                {
+                    b.HasOne("CapstonePsicologiaAPI.Models.Donacion", null)
+                        .WithMany("Articulos")
+                        .HasForeignKey("DonacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.Iniciativa", b =>
                 {
+                    b.HasOne("CapstonePsicologiaAPI.Models.Usuario", "CreadaPor")
+                        .WithMany()
+                        .HasForeignKey("CreadaPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CapstonePsicologiaAPI.Models.Imagen", "Imagen")
                         .WithMany()
                         .HasForeignKey("ImagenId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreadaPor");
 
                     b.Navigation("Imagen");
                 });
@@ -819,6 +1206,41 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Noticia", b =>
+                {
+                    b.HasOne("CapstonePsicologiaAPI.Models.Imagen", "Imagen")
+                        .WithMany()
+                        .HasForeignKey("ImagenId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Imagen");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Postulacion", b =>
+                {
+                    b.HasOne("CapstonePsicologiaAPI.Models.Archivo", "CvArchivo")
+                        .WithMany()
+                        .HasForeignKey("CvArchivoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CapstonePsicologiaAPI.Models.SesionEntrevista", "SesionEntrevista")
+                        .WithMany()
+                        .HasForeignKey("SesionEntrevistaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CapstonePsicologiaAPI.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CvArchivo");
+
+                    b.Navigation("SesionEntrevista");
 
                     b.Navigation("Usuario");
                 });
@@ -892,6 +1314,11 @@ namespace CapstonePsicologiaAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("CapstonePsicologiaAPI.Models.Donacion", b =>
+                {
+                    b.Navigation("Articulos");
                 });
 #pragma warning restore 612, 618
         }

@@ -44,4 +44,5 @@ public static class TiposCorreo
     public const string CitaCancelada = "CitaCancelada";
     public const string RespuestaContacto = "RespuestaContacto";
     public const string Masivo = "Masivo";
+    public const string Postulacion = "Postulacion";
 }
