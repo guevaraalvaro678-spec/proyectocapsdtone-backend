@@ -40,6 +40,18 @@ public class AdminData : IAdminData
     {
         await _db.Usuarios
             .Where(u => u.Id == usuarioId)
-            .ExecuteUpdateAsync(s => s.SetProperty(u => u.UltimoAcceso, DateTime.UtcNow));
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.UltimoAcceso, DateTime.UtcNow)
+                .SetProperty(u => u.IntentosFallidos, 0)
+                .SetProperty(u => u.BloqueadoHasta, (DateTime?)null));
+    }
+
+    public async Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta)
+    {
+        await _db.Usuarios
+            .Where(u => u.Id == usuarioId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.IntentosFallidos, intentos)
+                .SetProperty(u => u.BloqueadoHasta, bloqueadoHasta));
     }
 }

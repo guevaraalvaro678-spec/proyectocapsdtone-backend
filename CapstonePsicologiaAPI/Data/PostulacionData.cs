@@ -16,6 +16,10 @@ public interface IPostulacionData
     Task<List<Postulacion>> ListarDeSesionAsync(int sesionId);
     Task<Dictionary<string, int>> ContarPorEstadoAsync();
     Task<bool> DniEnUsoAsync(string dni, int usuarioId);
+
+    /// <summary>Anota un cambio de estado; se guarda con el siguiente GuardarAsync.</summary>
+    void AgregarHistorial(HistorialPostulacion registro);
+    Task<List<HistorialPostulacion>> ListarHistorialAsync(int postulacionId);
 }
 
 public class PostulacionData : IPostulacionData
@@ -83,6 +87,14 @@ public class PostulacionData : IPostulacionData
         await _db.Voluntarios.AnyAsync(v => v.Dni == dni)
         || await _db.Practicantes.AnyAsync(p => p.Dni == dni)
         || await _db.Postulaciones.AnyAsync(p => p.Dni == dni && p.UsuarioId != usuarioId && p.Estado != EstadosPostulacion.NoAdmitida);
+
+    public void AgregarHistorial(HistorialPostulacion registro) => _db.HistorialPostulaciones.Add(registro);
+
+    public Task<List<HistorialPostulacion>> ListarHistorialAsync(int postulacionId) =>
+        _db.HistorialPostulaciones.AsNoTracking().Include(h => h.Usuario)
+            .Where(h => h.PostulacionId == postulacionId)
+            .OrderBy(h => h.Fecha)
+            .ToListAsync();
 }
 
 public interface ISesionEntrevistaData
@@ -153,6 +165,8 @@ public interface IArchivoData
 
     /// <summary>Nombre del archivo sin cargar su contenido.</summary>
     Task<string?> ObtenerNombreAsync(int id);
+
+    Task RenombrarAsync(int id, string nombre);
 }
 
 public class ArchivoData : IArchivoData
@@ -176,4 +190,7 @@ public class ArchivoData : IArchivoData
 
     public Task<string?> ObtenerNombreAsync(int id) =>
         _db.Archivos.Where(a => a.Id == id).Select(a => a.Nombre).FirstOrDefaultAsync();
+
+    public Task RenombrarAsync(int id, string nombre) =>
+        _db.Archivos.Where(a => a.Id == id).ExecuteUpdateAsync(s => s.SetProperty(a => a.Nombre, nombre));
 }

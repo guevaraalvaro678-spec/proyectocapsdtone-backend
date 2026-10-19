@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<SitioConfig> SitioConfig => Set<SitioConfig>();
     public DbSet<Postulacion> Postulaciones => Set<Postulacion>();
     public DbSet<SesionEntrevista> SesionesEntrevista => Set<SesionEntrevista>();
+    public DbSet<HistorialPostulacion> HistorialPostulaciones => Set<HistorialPostulacion>();
     public DbSet<Archivo> Archivos => Set<Archivo>();
     public DbSet<Donacion> Donaciones => Set<Donacion>();
     public DbSet<DonacionArticulo> DonacionArticulos => Set<DonacionArticulo>();
@@ -227,6 +228,15 @@ public class AppDbContext : DbContext
             e.HasOne(p => p.SesionEntrevista).WithMany().HasForeignKey(p => p.SesionEntrevistaId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(p => p.Estado);
             e.HasIndex(p => p.UsuarioId);
+        });
+
+        modelBuilder.Entity<HistorialPostulacion>(e =>
+        {
+            e.Property(h => h.Estado).HasMaxLength(30).IsRequired();
+            e.Property(h => h.Nota).HasMaxLength(600);
+            e.HasOne<Postulacion>().WithMany().HasForeignKey(h => h.PostulacionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.Usuario).WithMany().HasForeignKey(h => h.UsuarioId).OnDelete(DeleteBehavior.NoAction);
+            e.HasIndex(h => h.PostulacionId);
         });
 
         modelBuilder.Entity<SesionEntrevista>(e =>

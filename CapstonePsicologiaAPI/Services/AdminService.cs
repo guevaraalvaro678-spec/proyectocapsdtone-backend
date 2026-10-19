@@ -11,27 +11,44 @@ public class AdminService : IAdminService
     private readonly IPasswordHasher<Usuario> _hasher;
     private readonly ITokenService _tokenService;
     private readonly IGoogleAuthService _google;
+    private readonly ICorreoService _correo;
 
-    public AdminService(IAdminData adminData, IPasswordHasher<Usuario> hasher, ITokenService tokenService, IGoogleAuthService google)
+    private const int MaximoIntentos = 5;
+    private const int MinutosBloqueo = 15;
+
+    public AdminService(IAdminData adminData, IPasswordHasher<Usuario> hasher, ITokenService tokenService, IGoogleAuthService google, ICorreoService correo)
     {
         _adminData = adminData;
         _hasher = hasher;
         _tokenService = tokenService;
         _google = google;
+        _correo = correo;
     }
 
-    /// <summary>Login de cualquier cuenta: administradores (por usuario), usuarios y psicólogos (por correo).</summary>
+    /// <summary>Login con usuario o correo. Tras 5 contraseñas incorrectas seguidas la cuenta se bloquea 15 minutos.</summary>
     public async Task<AdminSesionDto?> LoginAsync(AdminLoginDto login)
     {
         var nombre = Normalizar(login.Usuario);
         var usuario = await _adminData.ObtenerPorUsuarioOCorreoAsync(nombre);
 
+        if (usuario?.BloqueadoHasta > DateTime.UtcNow)
+        {
+            var minutos = (int)Math.Ceiling((usuario.BloqueadoHasta.Value - DateTime.UtcNow).TotalMinutes);
+            throw ReglaNegocioException.Prohibida($"Cuenta bloqueada por intentos fallidos. Intenta de nuevo en {minutos} min.");
+        }
+
         var resultado = usuario is null
             ? PasswordVerificationResult.Failed
             : _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, login.Password);
 
-        if (usuario is null || resultado == PasswordVerificationResult.Failed)
+        if (usuario is null)
             return null;
+
+        if (resultado == PasswordVerificationResult.Failed)
+        {
+            await RegistrarFalloAsync(usuario);
+            return null;
+        }
 
         // Cuenta con el hash antiguo: se vuelve a guardar en Base64.
         if (resultado == PasswordVerificationResult.SuccessRehashNeeded)
@@ -71,6 +88,24 @@ public class AdminService : IAdminService
         await _adminData.CrearAsync(usuario);
 
         return new AdminDto { Id = usuario.Id, Usuario = usuario.NombreUsuario, Rol = usuario.Rol };
+    }
+
+    private async Task RegistrarFalloAsync(Usuario usuario)
+    {
+        var intentos = usuario.IntentosFallidos + 1;
+        if (intentos < MaximoIntentos)
+        {
+            await _adminData.RegistrarIntentoFallidoAsync(usuario.Id, intentos, null);
+            return;
+        }
+
+        await _adminData.RegistrarIntentoFallidoAsync(usuario.Id, 0, DateTime.UtcNow.AddMinutes(MinutosBloqueo));
+        if (usuario.Correo is not null)
+        {
+            await _correo.EncolarAsync(usuario.Correo, usuario.Nombre, "Tu cuenta fue bloqueada temporalmente",
+                PlantillasCorreo.CuentaBloqueada(usuario.Nombre, MinutosBloqueo, $"{_correo.FrontUrl}/olvide-password"),
+                TiposCorreo.RecuperarPassword);
+        }
     }
 
     /// <summary>Arma la respuesta de sesión (con token) para una cuenta. La comparten login y registro de usuarios.</summary>

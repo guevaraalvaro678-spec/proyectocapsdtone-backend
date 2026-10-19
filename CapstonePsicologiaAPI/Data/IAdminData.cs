@@ -10,7 +10,8 @@ public interface IAdminData
     Task<bool> ExisteNombreUsuarioAsync(string nombreUsuario);
     Task CrearAsync(Usuario usuario);
 
-    /// <summary>Anota la fecha del último inicio de sesión.</summary>
+    /// <summary>Anota la fecha del último inicio de sesión y limpia los intentos fallidos.</summary>
     Task RegistrarAccesoAsync(int usuarioId);
+    Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta);
     Task ActualizarPasswordAsync(int usuarioId, string passwordHash);
 }

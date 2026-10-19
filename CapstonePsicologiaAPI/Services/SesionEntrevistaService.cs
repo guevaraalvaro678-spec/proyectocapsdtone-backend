@@ -100,6 +100,13 @@ public class SesionEntrevistaService : ISesionEntrevistaService
             }
 
             p.FechaActualizacion = DateTime.UtcNow;
+            if (estado is EstadosSesion.Realizada or EstadosSesion.Cancelada)
+                _postulacionData.AgregarHistorial(new HistorialPostulacion
+                {
+                    PostulacionId = p.Id,
+                    Estado = p.Estado,
+                    Nota = $"Sesión {sesion.Codigo} {(estado == EstadosSesion.Realizada ? "realizada" : "cancelada")}",
+                });
         }
 
         sesion.Estado = estado;

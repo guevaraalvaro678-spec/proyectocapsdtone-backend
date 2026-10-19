@@ -77,6 +77,21 @@ public static class EstadosPostulacion
     public static bool EsFinal(string estado) => estado is Aceptada or NoAdmitida;
 }
 
+/// <summary>Cada cambio de estado de una postulación: qué estado tomó, cuándo y quién lo hizo.</summary>
+public class HistorialPostulacion
+{
+    public int Id { get; set; }
+    public int PostulacionId { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public string? Nota { get; set; }
+
+    /// <summary>Quién hizo el cambio (null si fue automático, por ejemplo al cerrar una sesión).</summary>
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
+}
+
 /// <summary>Sesión de entrevista grupal a la que se asignan varios postulantes (con un cupo máximo).</summary>
 public class SesionEntrevista
 {

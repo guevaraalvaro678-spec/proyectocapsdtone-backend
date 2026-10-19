@@ -60,7 +60,7 @@ public class PostulacionController : ControllerBase
     [Authorize(Roles = RolesGestion)]
     [HttpPut("api/postulacion/{id:int}/estado")]
     public async Task<ActionResult<PostulacionDto>> CambiarEstado(int id, [FromBody] PostulacionEstadoDto datos) =>
-        Ok(await _postulacionService.CambiarEstadoAsync(id, datos));
+        Ok(await _postulacionService.CambiarEstadoAsync(id, datos, UsuarioId()));
 
     private int UsuarioId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private string Rol() => User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;

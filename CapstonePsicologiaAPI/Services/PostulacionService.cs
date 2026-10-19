@@ -12,7 +12,7 @@ public interface IPostulacionService
     Task<PostulacionDto?> ObtenerMiaAsync(int usuarioId);
     Task<List<PostulacionDto>> ListarAsync(string? tipo, string? estado, string? buscar);
     Task<PostulacionDto> ObtenerAsync(int id);
-    Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos);
+    Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos, int actorId);
 }
 
 /// <summary>
@@ -143,7 +143,16 @@ public class PostulacionService : IPostulacionService
         // El nombre de la cuenta pasa a ser el nombre real de la persona.
         usuario.Nombre = postulacion.Nombres;
         usuario.Telefono = postulacion.Telefono;
+        _postulacionData.AgregarHistorial(new HistorialPostulacion
+        {
+            PostulacionId = postulacion.Id,
+            Estado = postulacion.Estado,
+            UsuarioId = usuarioId,
+        });
         await _postulacionData.GuardarAsync();
+
+        // CV con nombre estándar para ubicarlo fácil: CV_POS-2026-001_APELLIDOS.pdf
+        await _archivoData.RenombrarAsync(postulacion.CvArchivoId!.Value, NombreCv(postulacion));
 
         if (usuario.Correo is not null)
         {
@@ -174,7 +183,7 @@ public class PostulacionService : IPostulacionService
     public async Task<PostulacionDto> ObtenerAsync(int id) =>
         await ADtoAsync(await ObtenerEntidadAsync(id), incluirCv: true);
 
-    public async Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos)
+    public async Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos, int actorId)
     {
         var postulacion = await ObtenerEntidadAsync(id);
 
@@ -206,6 +215,13 @@ public class PostulacionService : IPostulacionService
 
         postulacion.Estado = datos.Estado;
         postulacion.FechaActualizacion = DateTime.UtcNow;
+        _postulacionData.AgregarHistorial(new HistorialPostulacion
+        {
+            PostulacionId = postulacion.Id,
+            Estado = datos.Estado,
+            Nota = Limpiar(datos.NotaEvaluacion),
+            UsuarioId = actorId,
+        });
         await _postulacionData.GuardarAsync();
 
         await NotificarAsync(postulacion, usuario);
@@ -330,7 +346,24 @@ public class PostulacionService : IPostulacionService
             FechaEnvio = Mapeos.Utc(p.FechaEnvio),
             FechaActualizacion = Mapeos.Utc(p.FechaActualizacion),
             Sesion = sesion,
+            Historial = incluirCv
+                ? (await _postulacionData.ListarHistorialAsync(p.Id)).Select(h => new HistorialPostulacionDto
+                {
+                    Estado = h.Estado,
+                    Nota = h.Nota,
+                    Responsable = h.Usuario is null ? null : string.IsNullOrWhiteSpace(h.Usuario.Nombre) ? h.Usuario.NombreUsuario : h.Usuario.Nombre,
+                    Fecha = Mapeos.Utc(h.Fecha),
+                }).ToList()
+                : null,
         };
+    }
+
+    private static string NombreCv(Postulacion p)
+    {
+        var apellidos = string.Join('_', p.Apellidos.ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var limpio = new string(apellidos.Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => char.IsAsciiLetterOrDigit(c) || c == '_').ToArray());
+        return $"CV_{p.Codigo}_{limpio}.pdf";
     }
 
     private string EnlaceSeguimiento() => $"{_correo.FrontUrl}/mi-postulacion";

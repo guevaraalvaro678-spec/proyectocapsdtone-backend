@@ -99,6 +99,17 @@ public class PostulacionDto
     public DateTime FechaEnvio { get; set; }
     public DateTime FechaActualizacion { get; set; }
     public SesionEntrevistaDto? Sesion { get; set; }
+
+    /// <summary>Cambios de estado (solo en el detalle, no en las listas).</summary>
+    public List<HistorialPostulacionDto>? Historial { get; set; }
+}
+
+public class HistorialPostulacionDto
+{
+    public string Estado { get; set; } = string.Empty;
+    public string? Nota { get; set; }
+    public string? Responsable { get; set; }
+    public DateTime Fecha { get; set; }
 }
 
 public class SesionEntrevistaGuardarDto

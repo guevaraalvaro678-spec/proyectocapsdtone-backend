@@ -35,6 +35,10 @@ public class Usuario
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
     public DateTime? UltimoAcceso { get; set; }
 
+    // Bloqueo temporal tras varios intentos fallidos de contraseña.
+    public int IntentosFallidos { get; set; }
+    public DateTime? BloqueadoHasta { get; set; }
+
     // Recuperación de contraseña: solo se guarda el hash del token, nunca el token.
     public string? TokenRecuperacionHash { get; set; }
     public DateTime? TokenRecuperacionExpira { get; set; }

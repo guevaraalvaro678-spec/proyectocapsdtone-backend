@@ -16,6 +16,14 @@ public static class PlantillasCorreo
             enlace,
             "Ir a mi espacio");
 
+    public static string CuentaBloqueada(string nombre, int minutos, string enlace) =>
+        Envolver(
+            $"Bloqueamos tu cuenta por seguridad, {H(PrimerNombre(nombre))}",
+            $"<p>Hubo varios intentos fallidos de contraseña. Tu cuenta quedará bloqueada durante {minutos} minutos.</p>" +
+            "<p>Si no fuiste tú, te recomendamos cambiar tu contraseña.</p>",
+            enlace,
+            "Recuperar mi contraseña");
+
     public static string CuentaCreada(string nombre, string enlace) =>
         Envolver(
             $"¡Hola, {H(PrimerNombre(nombre))}!",
