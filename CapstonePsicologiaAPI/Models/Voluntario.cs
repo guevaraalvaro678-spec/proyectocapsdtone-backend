@@ -1,12 +1,13 @@
 namespace CapstonePsicologiaAPI.Models;
 
 /// <summary>
-/// Perfil de un voluntario. La clave primaria es el DNI; la cuenta de acceso vive en Usuarios (`UsuarioId`).
+/// Perfil de un voluntario. La clave primaria es su cuenta (`UsuarioId`): al postular como voluntario
+/// no se pide DNI, así que puede quedar vacío.
 /// </summary>
 public class Voluntario
 {
-    /// <summary>DNI de 8 dígitos: clave primaria.</summary>
-    public string Dni { get; set; } = string.Empty;
+    /// <summary>DNI de 8 dígitos (opcional; único cuando existe).</summary>
+    public string? Dni { get; set; }
 
     public int UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }

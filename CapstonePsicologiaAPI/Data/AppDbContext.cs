@@ -129,11 +129,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Voluntario>(e =>
         {
-            e.HasKey(v => v.Dni);
+            // La clave es la cuenta: el voluntario puede no tener DNI registrado.
+            e.HasKey(v => v.UsuarioId);
             e.Property(v => v.Dni).HasMaxLength(8).IsFixedLength();
+            e.HasIndex(v => v.Dni).IsUnique().HasFilter("[Dni] IS NOT NULL");
             e.Property(v => v.Apellidos).HasMaxLength(100).IsRequired();
             e.HasOne(v => v.Usuario).WithMany().HasForeignKey(v => v.UsuarioId).OnDelete(DeleteBehavior.Restrict);
-            e.HasIndex(v => v.UsuarioId).IsUnique();
         });
 
         modelBuilder.Entity<Practicante>(e =>
@@ -201,6 +202,10 @@ public class AppDbContext : DbContext
         {
             e.Property(c => c.Id).ValueGeneratedNever();
             e.HasOne(c => c.LogoImagen).WithMany().HasForeignKey(c => c.LogoImagenId).OnDelete(DeleteBehavior.SetNull);
+            // NoAction: SQL Server no permite dos borrados en cascada hacia la misma tabla (el servicio borra la imagen anterior).
+            e.HasOne(c => c.YapeQrImagen).WithMany().HasForeignKey(c => c.YapeQrImagenId).OnDelete(DeleteBehavior.NoAction);
+            e.Property(c => c.YapeNumero).HasMaxLength(9);
+            e.Property(c => c.YapeTitular).HasMaxLength(100);
         });
 
         modelBuilder.Entity<Postulacion>(e =>
@@ -208,17 +213,18 @@ public class AppDbContext : DbContext
             e.Property(p => p.Codigo).HasMaxLength(20).IsRequired();
             e.HasIndex(p => p.Codigo).IsUnique();
             e.Property(p => p.Tipo).HasMaxLength(20).IsRequired();
-            e.Property(p => p.Dni).HasMaxLength(8).IsFixedLength().IsRequired();
+            // DNI, nacimiento, dirección y área solo se piden a practicantes.
+            e.Property(p => p.Dni).HasMaxLength(8).IsFixedLength();
             e.Property(p => p.Nombres).HasMaxLength(100).IsRequired();
             e.Property(p => p.Apellidos).HasMaxLength(100).IsRequired();
-            e.Property(p => p.Direccion).HasMaxLength(200).IsRequired();
-            e.Property(p => p.Distrito).HasMaxLength(100).IsRequired();
-            e.Property(p => p.Provincia).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Direccion).HasMaxLength(200);
+            e.Property(p => p.Distrito).HasMaxLength(100);
+            e.Property(p => p.Provincia).HasMaxLength(100);
             e.Property(p => p.Telefono).HasMaxLength(30).IsRequired();
             e.Property(p => p.Universidad).HasMaxLength(150);
             e.Property(p => p.Carrera).HasMaxLength(100);
             e.Property(p => p.Ciclo).HasMaxLength(30);
-            e.Property(p => p.Departamento).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Departamento).HasMaxLength(100);
             e.Property(p => p.DepartamentoSecundario).HasMaxLength(100);
             e.Property(p => p.IniciativaDescripcion).HasMaxLength(600);
             e.Property(p => p.Estado).HasMaxLength(30).IsRequired();

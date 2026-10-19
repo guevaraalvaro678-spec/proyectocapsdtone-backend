@@ -47,12 +47,23 @@ public static class ColoresIniciativa
     public const string Gris = "gris";
 }
 
-/// <summary>Ajustes del sitio público (una sola fila, Id = 1): por ahora el logo.</summary>
+/// <summary>Ajustes del sitio público (una sola fila, Id = 1): logo y datos de Yape.</summary>
 public class SitioConfig
 {
     public int Id { get; set; } = 1;
     public int? LogoImagenId { get; set; }
     public Imagen? LogoImagen { get; set; }
+
+    // ---- Donaciones de dinero con Yape (la ONG solo muestra el número y el QR; no procesa pagos) ----
+
+    /// <summary>Celular de Yape (9 dígitos). Sin número ni QR, la sección de Yape no se muestra.</summary>
+    public string? YapeNumero { get; set; }
+
+    /// <summary>Nombre que aparece en Yape al transferir, para que el donante confirme que es la ONG.</summary>
+    public string? YapeTitular { get; set; }
+
+    public int? YapeQrImagenId { get; set; }
+    public Imagen? YapeQrImagen { get; set; }
 }
 
 public static class EstadosIniciativa

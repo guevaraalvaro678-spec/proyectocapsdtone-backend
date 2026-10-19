@@ -20,7 +20,8 @@ public class PracticanteController : ControllerBase
         _practicanteService = practicanteService;
     }
 
-    /// <summary>Registro público: crea la cuenta y devuelve la sesión (queda logueado).</summary>
+    /// <summary>Alta directa de un practicante. Solo la dirección: el camino normal es postular y ser aceptado.</summary>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpPost("registro")]
     public async Task<ActionResult<AdminSesionDto>> Registrar([FromBody] PracticanteRegistroDto datos) =>
         StatusCode(StatusCodes.Status201Created, await _practicanteService.RegistrarAsync(datos));

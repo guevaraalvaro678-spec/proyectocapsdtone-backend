@@ -85,6 +85,14 @@ public class SesionEntrevistaService : ISesionEntrevistaService
     public async Task<SesionEntrevistaDto> CambiarEstadoAsync(int id, string estado)
     {
         var sesion = await ObtenerAsync(id);
+
+        // Una sesión solo se cierra una vez: de Programada a Realizada o Cancelada.
+        if (sesion.Estado != EstadosSesion.Programada)
+            throw ReglaNegocioException.Conflicto("Esta sesión ya fue cerrada");
+
+        if (estado == EstadosSesion.Realizada && sesion.Inicio > DateTime.UtcNow)
+            throw ReglaNegocioException.Invalida("La sesión todavía no empieza; no se puede marcar como realizada");
+
         var postulantes = await _postulacionData.ListarDeSesionAsync(id);
 
         foreach (var p in postulantes.Where(p => p.Estado == EstadosPostulacion.EntrevistaAgendada))
@@ -164,5 +172,7 @@ public class SesionEntrevistaService : ISesionEntrevistaService
         Cupo = s.Cupo,
         Inscritos = inscritos,
         Estado = s.Estado,
+        Disponible = s.Estado == EstadosSesion.Programada && s.Fin > DateTime.UtcNow && inscritos < s.Cupo,
+        PorcentajeOcupacion = s.Cupo == 0 ? 0 : (int)Math.Round(inscritos * 100.0 / s.Cupo, MidpointRounding.AwayFromZero),
     };
 }

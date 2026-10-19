@@ -36,6 +36,24 @@ public class PostulacionController : ControllerBase
         return File(archivo.Datos, archivo.TipoContenido, archivo.Nombre);
     }
 
+    /// <summary>
+    /// Envío del formulario de postulación en una sola operación: datos + CV (multipart) y, sin sesión,
+    /// el correo y la contraseña o la credencial de Google para crear la cuenta.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("api/postulacion/completa")]
+    [RequestSizeLimit(12 * 1024 * 1024)]
+    public async Task<ActionResult<PostulacionEnviadaDto>> EnviarCompleta([FromForm] PostulacionCompletaDto datos, IFormFile? cv)
+    {
+        int? usuarioId = User.Identity?.IsAuthenticated == true ? UsuarioId() : null;
+        return StatusCode(StatusCodes.Status201Created, await _postulacionService.EnviarCompletaAsync(usuarioId, datos, cv));
+    }
+
+    /// <summary>Áreas a las que se puede postular.</summary>
+    [AllowAnonymous]
+    [HttpGet("api/catalogo/areas")]
+    public ActionResult<string[]> Areas() => Ok(AreasOng.Todas);
+
     [Authorize(Roles = Roles.Postulante)]
     [HttpPost("api/postulacion")]
     public async Task<ActionResult<PostulacionDto>> Crear([FromBody] PostulacionCrearDto datos) =>
@@ -51,6 +69,19 @@ public class PostulacionController : ControllerBase
     public async Task<ActionResult<List<PostulacionDto>>> Listar(
         [FromQuery] string? tipo = null, [FromQuery] string? estado = null, [FromQuery] string? buscar = null) =>
         Ok(await _postulacionService.ListarAsync(tipo, estado, buscar));
+
+    [Authorize(Roles = RolesGestion)]
+    [HttpGet("api/postulacion/resumen")]
+    public async Task<ActionResult<PostulacionResumenDto>> Resumen(
+        [FromQuery] string? tipo = null, [FromQuery] string? estado = null, [FromQuery] string? buscar = null) =>
+        Ok(await _postulacionService.ResumenAsync(tipo, estado, buscar));
+
+    [Authorize(Roles = RolesGestion)]
+    [HttpGet("api/postulacion/exportar")]
+    public async Task<IActionResult> Exportar(
+        [FromQuery] string? tipo = null, [FromQuery] string? estado = null, [FromQuery] string? buscar = null) =>
+        File(await _postulacionService.ExportarCsvAsync(tipo, estado, buscar), "text/csv; charset=utf-8",
+            $"postulaciones_{DateTime.UtcNow.AddHours(-5):yyyy-MM-dd}.csv");
 
     [Authorize(Roles = RolesGestion)]
     [HttpGet("api/postulacion/{id:int}")]

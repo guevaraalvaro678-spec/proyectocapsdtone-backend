@@ -34,6 +34,17 @@ public class DonacionController : ControllerBase
     [HttpPut("{id:int}/estado")]
     public async Task<ActionResult<DonacionDto>> CambiarEstado(int id, [FromBody] DonacionEstadoDto datos) =>
         Ok(await _donacionService.CambiarEstadoAsync(id, datos));
+
+    [Authorize(Roles = RolesAdmin)]
+    [HttpPut("{id:int}/observaciones")]
+    public async Task<ActionResult<DonacionDto>> GuardarObservaciones(int id, [FromBody] DonacionObservacionesDto datos) =>
+        Ok(await _donacionService.GuardarObservacionesAsync(id, datos.Observaciones));
+
+    /// <summary>Totales por estado e inventario de lo recibido.</summary>
+    [Authorize(Roles = RolesAdmin)]
+    [HttpGet("resumen")]
+    public async Task<ActionResult<DonacionResumenDto>> Resumen() =>
+        Ok(await _donacionService.ResumenAsync());
 }
 
 /// <summary>Noticias del sitio público.</summary>

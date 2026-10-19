@@ -115,7 +115,7 @@ public class VoluntarioService : IVoluntarioService
     private static VoluntarioDto ADto(Voluntario v) => new()
     {
         UsuarioId = v.UsuarioId,
-        Dni = v.Dni,
+        Dni = v.Dni ?? string.Empty,
         Nombre = v.Usuario!.Nombre,
         Apellidos = v.Apellidos,
         Correo = v.Usuario.Correo,

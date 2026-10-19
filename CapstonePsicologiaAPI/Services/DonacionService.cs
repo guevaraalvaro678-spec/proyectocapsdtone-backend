@@ -9,6 +9,8 @@ public interface IDonacionService
     Task<DonacionDto> RegistrarAsync(DonacionCrearDto datos);
     Task<List<DonacionDto>> ListarAsync(string? estado, string? buscar);
     Task<DonacionDto> CambiarEstadoAsync(int id, DonacionEstadoDto datos);
+    Task<DonacionResumenDto> ResumenAsync();
+    Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones);
 }
 
 /// <summary>Donaciones de artículos físicos: se registran en el sitio público y el administrador confirma su recepción.</summary>
@@ -51,11 +53,40 @@ public class DonacionService : IDonacionService
         var donacion = await _donacionData.ObtenerPorIdAsync(id)
                        ?? throw ReglaNegocioException.NoEncontrada("Donación no encontrada");
 
+        if (donacion.Estado == datos.Estado)
+            throw ReglaNegocioException.Conflicto($"La donación ya está en ese estado");
+
         donacion.Estado = datos.Estado;
         donacion.Observaciones = string.IsNullOrWhiteSpace(datos.Observaciones) ? donacion.Observaciones : datos.Observaciones.Trim();
         donacion.FechaRevision = DateTime.UtcNow;
         await _donacionData.GuardarAsync();
         return ADto(donacion);
+    }
+
+    /// <summary>Cambia solo las observaciones (también permite borrarlas).</summary>
+    public async Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones)
+    {
+        var donacion = await _donacionData.ObtenerPorIdAsync(id)
+                       ?? throw ReglaNegocioException.NoEncontrada("Donación no encontrada");
+
+        donacion.Observaciones = string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim();
+        await _donacionData.GuardarAsync();
+        return ADto(donacion);
+    }
+
+    public async Task<DonacionResumenDto> ResumenAsync()
+    {
+        var porEstado = await _donacionData.ContarPorEstadoAsync();
+        var inventario = await _donacionData.InventarioAsync();
+
+        return new DonacionResumenDto
+        {
+            Pendientes = porEstado.GetValueOrDefault(EstadosDonacion.PendienteRecepcion),
+            Recibidas = porEstado.GetValueOrDefault(EstadosDonacion.Recibida),
+            Desestimadas = porEstado.GetValueOrDefault(EstadosDonacion.Desestimada),
+            Total = porEstado.Values.Sum(),
+            Inventario = inventario.Select(a => new DonacionArticuloDto { Categoria = a.Categoria, Nombre = a.Nombre, Cantidad = a.Cantidad }).ToList(),
+        };
     }
 
     private static DonacionDto ADto(Donacion d) => new()

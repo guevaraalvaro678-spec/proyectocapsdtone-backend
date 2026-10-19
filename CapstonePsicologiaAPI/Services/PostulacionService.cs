@@ -1,6 +1,7 @@
 using CapstonePsicologiaAPI.Data;
 using CapstonePsicologiaAPI.DTOs;
 using CapstonePsicologiaAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CapstonePsicologiaAPI.Services;
 
@@ -9,10 +10,17 @@ public interface IPostulacionService
     Task<ArchivoSubidoDto> SubirCvAsync(IFormFile archivo, int usuarioId);
     Task<Archivo> ObtenerArchivoAsync(int archivoId, int actorId, string actorRol);
     Task<PostulacionDto> CrearAsync(int usuarioId, PostulacionCrearDto datos);
+
+    /// <summary>Crea la cuenta (si hace falta), guarda el CV y registra la postulación en una sola transacción.</summary>
+    Task<PostulacionEnviadaDto> EnviarCompletaAsync(int? usuarioId, PostulacionCompletaDto datos, IFormFile? cv);
     Task<PostulacionDto?> ObtenerMiaAsync(int usuarioId);
     Task<List<PostulacionDto>> ListarAsync(string? tipo, string? estado, string? buscar);
     Task<PostulacionDto> ObtenerAsync(int id);
     Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos, int actorId);
+    Task<PostulacionResumenDto> ResumenAsync(string? tipo, string? estado, string? buscar);
+
+    /// <summary>Las postulaciones filtradas en CSV (se abre en Excel).</summary>
+    Task<byte[]> ExportarCsvAsync(string? tipo, string? estado, string? buscar);
 }
 
 /// <summary>
@@ -31,6 +39,8 @@ public class PostulacionService : IPostulacionService
     private readonly IVoluntarioData _voluntarioData;
     private readonly IPracticanteData _practicanteData;
     private readonly ICorreoService _correo;
+    private readonly ICuentaService _cuenta;
+    private readonly AppDbContext _db;
 
     public PostulacionService(
         IPostulacionData postulacionData,
@@ -39,7 +49,9 @@ public class PostulacionService : IPostulacionService
         IUsuarioData usuarioData,
         IVoluntarioData voluntarioData,
         IPracticanteData practicanteData,
-        ICorreoService correo)
+        ICorreoService correo,
+        ICuentaService cuenta,
+        AppDbContext db)
     {
         _postulacionData = postulacionData;
         _sesionData = sesionData;
@@ -48,6 +60,48 @@ public class PostulacionService : IPostulacionService
         _voluntarioData = voluntarioData;
         _practicanteData = practicanteData;
         _correo = correo;
+        _cuenta = cuenta;
+        _db = db;
+    }
+
+    public async Task<PostulacionEnviadaDto> EnviarCompletaAsync(int? usuarioId, PostulacionCompletaDto datos, IFormFile? cv)
+    {
+        if (usuarioId is null && !datos.AceptaTerminos)
+            throw ReglaNegocioException.Invalida("Acepta los términos y el tratamiento de tus datos para continuar.");
+
+        // La transacción va dentro de la estrategia de reintentos que usa la conexión (EnableRetryOnFailure).
+        var estrategia = _db.Database.CreateExecutionStrategy();
+        return await estrategia.ExecuteAsync(async () =>
+        {
+            await using var transaccion = await _db.Database.BeginTransactionAsync();
+
+            var usuario = usuarioId is null
+                ? await _cuenta.ObtenerOCrearPostulanteAsync(datos.Correo, datos.Password, datos.GoogleCredential)
+                : await _usuarioData.ObtenerPorIdAsync(usuarioId.Value) ?? throw ReglaNegocioException.NoEncontrada("Cuenta no encontrada");
+
+            var sesion = usuarioId is null ? await _cuenta.RenovarSesionAsync(usuario.Id) : null;
+
+            // El correo ya era de un miembro: no se postula, entra a su portal.
+            if (usuario.Rol is Roles.Voluntario or Roles.Practicante)
+            {
+                await transaccion.CommitAsync();
+                return new PostulacionEnviadaDto { Sesion = sesion, EsMiembro = true };
+            }
+
+            // El CV solo se pide a practicantes.
+            datos.CvArchivoId = null;
+            if (datos.Tipo == TiposPostulacion.Practicante)
+            {
+                if (cv is null)
+                    throw ReglaNegocioException.Invalida("Adjunta tu CV en PDF");
+                datos.CvArchivoId = (await SubirCvAsync(cv, usuario.Id)).Id;
+            }
+
+            var postulacion = await CrearAsync(usuario.Id, datos);
+
+            await transaccion.CommitAsync();
+            return new PostulacionEnviadaDto { Sesion = sesion, Postulacion = postulacion };
+        });
     }
 
     public async Task<ArchivoSubidoDto> SubirCvAsync(IFormFile archivo, int usuarioId)
@@ -100,41 +154,32 @@ public class PostulacionService : IPostulacionService
             throw ReglaNegocioException.Conflicto("Ya tienes una postulación en curso");
 
         var esPracticante = datos.Tipo == TiposPostulacion.Practicante;
-        if (esPracticante && (Vacio(datos.Universidad) || Vacio(datos.Carrera) || Vacio(datos.Ciclo)))
-            throw ReglaNegocioException.Invalida("Para postular como practicante completa universidad, carrera y ciclo");
+        if (esPracticante)
+            await ValidarDatosPracticanteAsync(usuarioId, datos);
 
-        if (datos.FechaNacimiento.Date > DateTime.UtcNow.Date.AddYears(-15))
-            throw ReglaNegocioException.Invalida("Revisa tu fecha de nacimiento (debes tener al menos 15 años)");
-
-        if (await _postulacionData.DniEnUsoAsync(datos.Dni, usuarioId))
-            throw ReglaNegocioException.Conflicto("Ese DNI ya está registrado en otra cuenta");
-
-        var cv = await _archivoData.ObtenerNombreAsync(datos.CvArchivoId!.Value);
-        if (cv is null || (await _archivoData.ObtenerAsync(datos.CvArchivoId.Value))!.SubidoPorUsuarioId != usuarioId)
-            throw ReglaNegocioException.Invalida("Vuelve a adjuntar tu CV");
-
+        // Al voluntario solo se le piden nombres, apellidos y teléfono (y el correo de su cuenta).
         var postulacion = new Postulacion
         {
             // Código provisional único; se reemplaza por POS-AAAA-NNN cuando la base asigna el Id.
             Codigo = "TMP-" + Guid.NewGuid().ToString("N")[..16],
             UsuarioId = usuarioId,
             Tipo = datos.Tipo,
-            Dni = datos.Dni,
             Nombres = datos.Nombres.Trim(),
             Apellidos = datos.Apellidos.Trim(),
-            FechaNacimiento = datos.FechaNacimiento.Date,
-            Direccion = datos.Direccion.Trim(),
-            Distrito = datos.Distrito.Trim(),
-            Provincia = datos.Provincia.Trim(),
             Telefono = datos.Telefono.Trim(),
-            Universidad = Limpiar(datos.Universidad),
-            Carrera = Limpiar(datos.Carrera),
-            Ciclo = Limpiar(datos.Ciclo),
-            Departamento = datos.Departamento.Trim(),
+            Dni = esPracticante ? datos.Dni : null,
+            FechaNacimiento = esPracticante ? datos.FechaNacimiento!.Value.Date : null,
+            Direccion = esPracticante ? Limpiar(datos.Direccion) : null,
+            Distrito = esPracticante ? Limpiar(datos.Distrito) : null,
+            Provincia = esPracticante ? Limpiar(datos.Provincia) : null,
+            Universidad = esPracticante ? Limpiar(datos.Universidad) : null,
+            Carrera = esPracticante ? Limpiar(datos.Carrera) : null,
+            Ciclo = esPracticante ? Limpiar(datos.Ciclo) : null,
+            Departamento = esPracticante ? Limpiar(datos.Departamento) : null,
             DepartamentoSecundario = esPracticante ? Limpiar(datos.DepartamentoSecundario) : null,
-            CvArchivoId = datos.CvArchivoId,
-            ParticipaIniciativa = datos.ParticipaIniciativa,
-            IniciativaDescripcion = datos.ParticipaIniciativa ? Limpiar(datos.IniciativaDescripcion) : null,
+            CvArchivoId = esPracticante ? datos.CvArchivoId : null,
+            ParticipaIniciativa = esPracticante && datos.ParticipaIniciativa,
+            IniciativaDescripcion = esPracticante && datos.ParticipaIniciativa ? Limpiar(datos.IniciativaDescripcion) : null,
         };
 
         await _postulacionData.CrearAsync(postulacion);
@@ -152,7 +197,8 @@ public class PostulacionService : IPostulacionService
         await _postulacionData.GuardarAsync();
 
         // CV con nombre estándar para ubicarlo fácil: CV_POS-2026-001_APELLIDOS.pdf
-        await _archivoData.RenombrarAsync(postulacion.CvArchivoId!.Value, NombreCv(postulacion));
+        if (postulacion.CvArchivoId is { } cvId)
+            await _archivoData.RenombrarAsync(cvId, NombreCv(postulacion));
 
         if (usuario.Correo is not null)
         {
@@ -163,6 +209,41 @@ public class PostulacionService : IPostulacionService
 
         postulacion.Usuario = usuario;
         return await ADtoAsync(postulacion, incluirCv: true);
+    }
+
+    /// <summary>El practicante debe completar DNI, nacimiento, dirección, formación, área y CV.</summary>
+    private async Task ValidarDatosPracticanteAsync(int usuarioId, PostulacionCrearDto datos)
+    {
+        if (Vacio(datos.Dni))
+            throw ReglaNegocioException.Invalida("Ingresa tu DNI");
+
+        if (datos.FechaNacimiento is null)
+            throw ReglaNegocioException.Invalida("Ingresa tu fecha de nacimiento");
+
+        if (datos.FechaNacimiento.Value.Date > DateTime.UtcNow.Date.AddYears(-15))
+            throw ReglaNegocioException.Invalida("Revisa tu fecha de nacimiento (debes tener al menos 15 años)");
+
+        if (Vacio(datos.Direccion) || Vacio(datos.Distrito) || Vacio(datos.Provincia))
+            throw ReglaNegocioException.Invalida("Completa tu dirección, distrito y provincia");
+
+        if (Vacio(datos.Universidad) || Vacio(datos.Carrera) || Vacio(datos.Ciclo))
+            throw ReglaNegocioException.Invalida("Para postular como practicante completa universidad, carrera y ciclo");
+
+        if (Vacio(datos.Departamento) || !AreasOng.Existe(datos.Departamento!))
+            throw ReglaNegocioException.Invalida("Elige un área de la lista");
+
+        if (!string.IsNullOrWhiteSpace(datos.DepartamentoSecundario) && !AreasOng.Existe(datos.DepartamentoSecundario))
+            throw ReglaNegocioException.Invalida("El área secundaria no es válida");
+
+        if (await _postulacionData.DniEnUsoAsync(datos.Dni!, usuarioId))
+            throw ReglaNegocioException.Conflicto("Ese DNI ya está registrado en otra cuenta");
+
+        if (datos.CvArchivoId is null)
+            throw ReglaNegocioException.Invalida("Adjunta tu CV en PDF");
+
+        var cv = await _archivoData.ObtenerAsync(datos.CvArchivoId.Value);
+        if (cv is null || cv.SubidoPorUsuarioId != usuarioId)
+            throw ReglaNegocioException.Invalida("Vuelve a adjuntar tu CV");
     }
 
     public async Task<PostulacionDto?> ObtenerMiaAsync(int usuarioId)
@@ -180,6 +261,45 @@ public class PostulacionService : IPostulacionService
         return dtos;
     }
 
+    public async Task<PostulacionResumenDto> ResumenAsync(string? tipo, string? estado, string? buscar)
+    {
+        var lista = await _postulacionData.ListarAsync(tipo, estado, buscar);
+        int Contar(params string[] estados) => lista.Count(p => estados.Contains(p.Estado));
+
+        return new PostulacionResumenDto
+        {
+            Total = lista.Count,
+            Recibidas = Contar(EstadosPostulacion.Recibida),
+            Habilitadas = Contar(EstadosPostulacion.HabilitadaEntrevista),
+            Agendadas = Contar(EstadosPostulacion.EntrevistaAgendada),
+            EnProceso = Contar(EstadosPostulacion.EntrevistaRealizada, EstadosPostulacion.EnCalificacion),
+            Aceptadas = Contar(EstadosPostulacion.Aceptada),
+            NoAdmitidas = Contar(EstadosPostulacion.NoAdmitida),
+            RequierenAtencion = Contar(EstadosPostulacion.Recibida, EstadosPostulacion.HabilitadaEntrevista),
+        };
+    }
+
+    public async Task<byte[]> ExportarCsvAsync(string? tipo, string? estado, string? buscar)
+    {
+        var lista = await _postulacionData.ListarAsync(tipo, estado, buscar);
+        var csv = new System.Text.StringBuilder();
+        static string Celda(string? valor) => $"\"{(valor ?? string.Empty).Replace("\"", "\"\"")}\"";
+        void Fila(params string?[] celdas) => csv.Append(string.Join(';', celdas.Select(Celda))).Append("\r\n");
+
+        Fila("Código", "Tipo", "DNI", "Nombres", "Apellidos", "Correo", "Teléfono", "Distrito", "Área", "Universidad", "Carrera", "Estado", "Fecha de envío");
+        foreach (var p in lista)
+        {
+            Fila(p.Codigo, p.Tipo, p.Dni, p.Nombres, p.Apellidos, p.Usuario?.Correo ?? p.Usuario?.NombreUsuario, p.Telefono, p.Distrito,
+                p.Departamento, p.Universidad, p.Carrera, EstadosPostulacion.Etiqueta(p.Estado), HoraLima(p.FechaEnvio).ToString("yyyy-MM-dd"));
+        }
+
+        // Con BOM para que Excel reconozca las tildes.
+        return System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
+    }
+
+    /// <summary>Lima está en UTC-5 todo el año (sin horario de verano).</summary>
+    private static DateTime HoraLima(DateTime utc) => utc.AddHours(-5);
+
     public async Task<PostulacionDto> ObtenerAsync(int id) =>
         await ADtoAsync(await ObtenerEntidadAsync(id), incluirCv: true);
 
@@ -189,6 +309,10 @@ public class PostulacionService : IPostulacionService
 
         if (EstadosPostulacion.EsFinal(postulacion.Estado))
             throw ReglaNegocioException.Conflicto("Esta postulación ya tiene un resultado final");
+
+        if (!EstadosPostulacion.PuedePasar(postulacion.Estado, datos.Estado))
+            throw ReglaNegocioException.Invalida(
+                $"No se puede pasar de \"{EstadosPostulacion.Etiqueta(postulacion.Estado)}\" a \"{EstadosPostulacion.Etiqueta(datos.Estado)}\"");
 
         var usuario = postulacion.Usuario!;
         postulacion.NotaEvaluacion = Limpiar(datos.NotaEvaluacion) ?? postulacion.NotaEvaluacion;
@@ -253,24 +377,24 @@ public class PostulacionService : IPostulacionService
     /// <summary>Aceptada: la cuenta pasa a Voluntario o Practicante y se crea su perfil con los datos de la postulación.</summary>
     private async Task IncorporarAsync(Postulacion p, Usuario usuario)
     {
-        if (await _voluntarioData.ExisteDniAsync(p.Dni))
+        if (p.Dni is not null && await _voluntarioData.ExisteDniAsync(p.Dni))
             throw ReglaNegocioException.Conflicto("Ese DNI ya pertenece a un miembro");
 
         if (p.Tipo == TiposPostulacion.Practicante)
         {
-            if (Vacio(p.Universidad) || Vacio(p.Carrera) || Vacio(p.Ciclo))
-                throw ReglaNegocioException.Invalida("Faltan los datos académicos del practicante");
+            if (Vacio(p.Dni) || Vacio(p.Universidad) || Vacio(p.Carrera) || Vacio(p.Ciclo) || Vacio(p.Departamento))
+                throw ReglaNegocioException.Invalida("Faltan datos del practicante (DNI, formación o área)");
 
             await _practicanteData.CrearAsync(new Practicante
             {
-                Dni = p.Dni,
+                Dni = p.Dni!,
                 UsuarioId = usuario.Id,
                 Apellidos = p.Apellidos,
                 Universidad = p.Universidad!,
                 Carrera = p.Carrera!,
                 Ciclo = p.Ciclo!,
-                DepartamentoPrincipal = p.Departamento,
-                DepartamentoSecundario = p.DepartamentoSecundario ?? p.Departamento,
+                DepartamentoPrincipal = p.Departamento!,
+                DepartamentoSecundario = p.DepartamentoSecundario ?? p.Departamento!,
             });
             usuario.Rol = Roles.Practicante;
         }
@@ -355,6 +479,7 @@ public class PostulacionService : IPostulacionService
                     Fecha = Mapeos.Utc(h.Fecha),
                 }).ToList()
                 : null,
+            Acciones = EstadosPostulacion.Acciones(p.Estado),
         };
     }
 

@@ -18,14 +18,14 @@ public class Postulacion
     /// <summary>Voluntario o Practicante.</summary>
     public string Tipo { get; set; } = TiposPostulacion.Voluntario;
 
-    // ---- Datos personales ----
-    public string Dni { get; set; } = string.Empty;
+    // ---- Datos personales (al voluntario solo se le piden nombres, apellidos y teléfono) ----
+    public string? Dni { get; set; }
     public string Nombres { get; set; } = string.Empty;
     public string Apellidos { get; set; } = string.Empty;
-    public DateTime FechaNacimiento { get; set; }
-    public string Direccion { get; set; } = string.Empty;
-    public string Distrito { get; set; } = string.Empty;
-    public string Provincia { get; set; } = string.Empty;
+    public DateTime? FechaNacimiento { get; set; }
+    public string? Direccion { get; set; }
+    public string? Distrito { get; set; }
+    public string? Provincia { get; set; }
     public string Telefono { get; set; } = string.Empty;
 
     // ---- Formación académica (obligatoria para practicantes) ----
@@ -33,8 +33,8 @@ public class Postulacion
     public string? Carrera { get; set; }
     public string? Ciclo { get; set; }
 
-    // ---- Área y CV ----
-    public string Departamento { get; set; } = string.Empty;
+    // ---- Área y CV (solo practicantes) ----
+    public string? Departamento { get; set; }
     public string? DepartamentoSecundario { get; set; }
     public int? CvArchivoId { get; set; }
     public Archivo? CvArchivo { get; set; }
@@ -53,6 +53,24 @@ public class Postulacion
 
     public DateTime FechaEnvio { get; set; } = DateTime.UtcNow;
     public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Áreas (departamentos) a las que se puede postular. El formulario las pide a GET api/catalogo/areas.</summary>
+public static class AreasOng
+{
+    public static readonly string[] Todas =
+    {
+        "Educación y Desarrollo Comunitario",
+        "Gestión Social",
+        "Comunicaciones",
+        "Proyectos Sociales",
+        "Eventos",
+        "Recursos Humanos",
+        "Administración y Finanzas",
+        "Tecnología",
+    };
+
+    public static bool Existe(string? area) => area is not null && Todas.Contains(area.Trim());
 }
 
 public static class TiposPostulacion
@@ -75,6 +93,38 @@ public static class EstadosPostulacion
         { Recibida, HabilitadaEntrevista, EntrevistaAgendada, EntrevistaRealizada, EnCalificacion, Aceptada, NoAdmitida };
 
     public static bool EsFinal(string estado) => estado is Aceptada or NoAdmitida;
+
+    /// <summary>Pasos permitidos del proceso. "No admitida" se puede dar en cualquier etapa abierta.</summary>
+    private static readonly Dictionary<string, string[]> Siguientes = new()
+    {
+        [Recibida] = new[] { HabilitadaEntrevista },
+        [HabilitadaEntrevista] = new[] { EntrevistaAgendada },
+        // Volver a "Entrevista agendada" estando agendada = cambiar de sesión.
+        [EntrevistaAgendada] = new[] { EntrevistaAgendada, EntrevistaRealizada },
+        [EntrevistaRealizada] = new[] { EnCalificacion },
+        [EnCalificacion] = new[] { Aceptada },
+    };
+
+    /// <summary>Estados a los que puede pasar una postulación que está en <paramref name="estado"/>.</summary>
+    public static List<string> Acciones(string estado) =>
+        EsFinal(estado) || !Siguientes.TryGetValue(estado, out var permitidos)
+            ? new List<string>()
+            : permitidos.Append(NoAdmitida).ToList();
+
+    public static bool PuedePasar(string desde, string hacia) => Acciones(desde).Contains(hacia);
+
+    /// <summary>Texto para mostrar cada estado en mensajes y correos.</summary>
+    public static string Etiqueta(string estado) => estado switch
+    {
+        Recibida => "Recibida",
+        HabilitadaEntrevista => "Habilitada para entrevista",
+        EntrevistaAgendada => "Entrevista agendada",
+        EntrevistaRealizada => "Entrevista realizada",
+        EnCalificacion => "En proceso de calificación",
+        Aceptada => "Aceptada",
+        NoAdmitida => "No admitida",
+        _ => estado,
+    };
 }
 
 /// <summary>Cada cambio de estado de una postulación: qué estado tomó, cuándo y quién lo hizo.</summary>

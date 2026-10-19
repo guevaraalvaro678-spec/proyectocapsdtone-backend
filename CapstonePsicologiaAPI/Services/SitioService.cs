@@ -10,6 +10,7 @@ public interface ISitioService
     Task<Imagen> ObtenerImagenAsync(int id);
     Task<SitioPublicoDto> ObtenerPublicoAsync();
     Task GuardarLogoAsync(int? imagenId);
+    Task GuardarYapeAsync(YapeGuardarDto datos);
     Task<List<IniciativaDto>> ListarIniciativasAsync();
     Task<IniciativaDto> CrearIniciativaAsync(IniciativaGuardarDto datos);
     Task<IniciativaDto> ActualizarIniciativaAsync(int id, IniciativaGuardarDto datos);
@@ -72,7 +73,38 @@ public class SitioService : ISitioService
         {
             LogoUrl = Url(config.LogoImagenId),
             Iniciativas = iniciativas.Select(ADto).ToList(),
+            Yape = config.YapeNumero is null && config.YapeQrImagenId is null
+                ? null
+                : new YapeDto
+                {
+                    Numero = config.YapeNumero,
+                    NumeroVisible = config.YapeNumero is { Length: 9 } n ? $"{n[..3]} {n[3..6]} {n[6..]}" : config.YapeNumero,
+                    Titular = config.YapeTitular,
+                    QrImagenId = config.YapeQrImagenId,
+                    QrUrl = Url(config.YapeQrImagenId),
+                },
         };
+    }
+
+    /// <summary>Guarda el número, el titular y el QR de Yape. Si cambia el QR, borra la imagen anterior.</summary>
+    public async Task GuardarYapeAsync(YapeGuardarDto datos)
+    {
+        if (datos.QrImagenId is not null && await _sitioData.ObtenerImagenAsync(datos.QrImagenId.Value) is null)
+            throw ReglaNegocioException.Invalida("La imagen del QR no existe");
+
+        var numero = string.IsNullOrWhiteSpace(datos.Numero) ? null : datos.Numero.Trim();
+        if (numero is null && datos.QrImagenId is null && !string.IsNullOrWhiteSpace(datos.Titular))
+            throw ReglaNegocioException.Invalida("Agrega el número de Yape o la imagen del QR");
+
+        var config = await _sitioData.ObtenerConfigAsync();
+        var qrAnterior = config.YapeQrImagenId;
+        config.YapeNumero = numero;
+        config.YapeTitular = string.IsNullOrWhiteSpace(datos.Titular) || (numero is null && datos.QrImagenId is null) ? null : datos.Titular.Trim();
+        config.YapeQrImagenId = datos.QrImagenId;
+        await _sitioData.GuardarAsync();
+
+        if (qrAnterior != datos.QrImagenId)
+            await _sitioData.EliminarImagenAsync(qrAnterior);
     }
 
     public async Task GuardarLogoAsync(int? imagenId)
@@ -154,6 +186,9 @@ public class SitioService : ISitioService
     {
         var iniciativa = await _sitioData.ObtenerIniciativaAsync(id)
                          ?? throw ReglaNegocioException.NoEncontrada("Iniciativa no encontrada");
+
+        if (iniciativa.Estado != EstadosIniciativa.Pendiente)
+            throw ReglaNegocioException.Conflicto("Esta iniciativa ya fue revisada");
 
         iniciativa.Estado = datos.Estado;
         iniciativa.MotivoRechazo = datos.Estado == EstadosIniciativa.Rechazada && !string.IsNullOrWhiteSpace(datos.Motivo) ? datos.Motivo.Trim() : null;

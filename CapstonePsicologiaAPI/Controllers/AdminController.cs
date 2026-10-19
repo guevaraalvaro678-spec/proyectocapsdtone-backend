@@ -17,15 +17,31 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
+    /// <summary>
+    /// Primer paso: usuario y contraseña. Con verificación en dos pasos devuelve un desafío y los medios
+    /// para recibir el código; la sesión llega después, en login/verificar.
+    /// </summary>
     [HttpPost("login")]
-    public async Task<ActionResult<AdminSesionDto>> Login(AdminLoginDto login)
+    public async Task<ActionResult<LoginResultadoDto>> Login(AdminLoginDto login)
     {
-        var sesion = await _adminService.LoginAsync(login);
+        var resultado = await _adminService.LoginAsync(login);
 
-        if (sesion is null)
+        if (resultado is null)
             return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos" });
 
-        return Ok(sesion);
+        return Ok(resultado);
+    }
+
+    /// <summary>Segundo paso: envía el código de 6 dígitos por correo o SMS.</summary>
+    [HttpPost("login/codigo")]
+    public async Task<ActionResult<CodigoEnviadoDto>> SolicitarCodigo(CodigoSolicitudDto datos) =>
+        Ok(await _adminService.SolicitarCodigoAsync(datos));
+
+    /// <summary>Segundo paso: comprueba el código y entrega la sesión.</summary>
+    [HttpPost("login/verificar")]
+    public async Task<ActionResult<AdminSesionDto>> VerificarCodigo(CodigoVerificarDto datos)
+    {
+        return Ok(await _adminService.VerificarCodigoAsync(datos));
     }
 
     /// <summary>Iniciar sesión con Google (la cuenta se crea antes desde "Únete").</summary>

@@ -42,7 +42,7 @@ public class VoluntarioData : IVoluntarioData
         if (!string.IsNullOrWhiteSpace(buscar))
         {
             var texto = buscar.Trim();
-            consulta = consulta.Where(v => v.Dni.Contains(texto) || v.Apellidos.Contains(texto)
+            consulta = consulta.Where(v => (v.Dni != null && v.Dni.Contains(texto)) || v.Apellidos.Contains(texto)
                                            || v.Usuario!.Nombre.Contains(texto) || v.Usuario.Correo!.Contains(texto));
         }
 

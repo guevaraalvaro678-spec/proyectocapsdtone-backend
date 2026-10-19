@@ -48,6 +48,24 @@ public class DonacionDto
     public List<DonacionArticuloDto> Articulos { get; set; } = new();
 }
 
+public class DonacionObservacionesDto
+{
+    [StringLength(500)]
+    public string? Observaciones { get; set; }
+}
+
+/// <summary>Panel de donaciones: totales por estado e inventario de lo recibido.</summary>
+public class DonacionResumenDto
+{
+    public int Pendientes { get; set; }
+    public int Recibidas { get; set; }
+    public int Desestimadas { get; set; }
+    public int Total { get; set; }
+
+    /// <summary>Artículos de las donaciones recibidas, sumados por categoría y nombre.</summary>
+    public List<DonacionArticuloDto> Inventario { get; set; } = new();
+}
+
 public class NoticiaGuardarDto
 {
     [Required, StringLength(200, MinimumLength = 3)]

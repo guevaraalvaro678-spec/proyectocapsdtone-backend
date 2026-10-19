@@ -109,6 +109,10 @@ public class PracticanteService : IPracticanteService
     public async Task<PracticanteDto> EnviarHorarioAsync(int usuarioId, HorarioEnviarDto datos)
     {
         var practicante = await ObtenerAsync(usuarioId);
+
+        if (practicante.EstadoHorario == EstadosHorario.EnRevision)
+            throw ReglaNegocioException.Conflicto("Recursos Humanos está revisando tu horario; espera su respuesta para volver a enviarlo");
+
         ValidarBloques(datos.Bloques);
 
         await _practicanteData.ReemplazarBloquesAsync(usuarioId, TiposBloque.Universidad, ABloques(usuarioId, TiposBloque.Universidad, datos.Bloques));
@@ -132,6 +136,9 @@ public class PracticanteService : IPracticanteService
 
         if (practicante.EstadoHorario == EstadosHorario.SinEnviar)
             throw ReglaNegocioException.Invalida("El practicante todavía no envió su horario");
+
+        if (datos.Estado == EstadosHorario.EnRevision && practicante.EstadoHorario != EstadosHorario.Pendiente)
+            throw ReglaNegocioException.Conflicto("Solo un horario pendiente puede pasar a revisión");
 
         if (datos.Estado == EstadosHorario.Aceptado)
         {

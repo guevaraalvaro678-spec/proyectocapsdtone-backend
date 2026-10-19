@@ -15,6 +15,12 @@ public interface ICuentaService
     /// <summary>Nuevo token con el rol actual (por ejemplo, cuando aceptan a un postulante).</summary>
     Task<AdminSesionDto> RenovarSesionAsync(int usuarioId);
 
+    /// <summary>
+    /// Cuenta para el envío del formulario de postulación: con Google usa la cuenta de ese correo o la crea;
+    /// con correo y contraseña la crea (si el correo ya existe, hay que iniciar sesión).
+    /// </summary>
+    Task<Usuario> ObtenerOCrearPostulanteAsync(string? correo, string? password, string? googleCredential);
+
     Task<CuentaDto> ObtenerAsync(int usuarioId);
     Task<CuentaDto> ActualizarPerfilAsync(int usuarioId, CuentaPerfilDto datos);
     Task CambiarPasswordAsync(int usuarioId, CuentaPasswordDto datos);
@@ -89,6 +95,35 @@ public class CuentaService : ICuentaService
     public async Task<AdminSesionDto> RenovarSesionAsync(int usuarioId) =>
         AdminService.ASesion(await ObtenerUsuarioAsync(usuarioId), _tokenService);
 
+    public async Task<Usuario> ObtenerOCrearPostulanteAsync(string? correo, string? password, string? googleCredential)
+    {
+        if (!string.IsNullOrWhiteSpace(googleCredential))
+        {
+            var perfil = await _google.ValidarAsync(googleCredential);
+            var existente = await _usuarioData.ObtenerPorCorreoAsync(perfil.Correo);
+            if (existente is not null)
+            {
+                if (!existente.Activo)
+                    throw ReglaNegocioException.Prohibida("Tu cuenta está desactivada. Contacta al administrador.");
+                if (existente.Rol is not (Roles.Postulante or Roles.Voluntario or Roles.Practicante))
+                    throw ReglaNegocioException.Prohibida("Esa cuenta es del equipo de AMAAC: inicia sesión desde el login.");
+                return existente;
+            }
+
+            var nombre = string.IsNullOrWhiteSpace(perfil.Nombres) ? NombreDesdeCorreo(perfil.Correo) : $"{perfil.Nombres} {perfil.Apellidos}".Trim();
+            return await CrearPostulanteAsync(perfil.Correo, nombre, Guid.NewGuid().ToString("N"));
+        }
+
+        if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(password))
+            throw ReglaNegocioException.Invalida("Crea tu cuenta: únete con Google o escribe tu correo y una contraseña.");
+
+        var limpio = correo.Trim().ToLowerInvariant();
+        if (await _usuarioData.ExisteCorreoAsync(limpio))
+            throw ReglaNegocioException.Conflicto("Ese correo ya tiene una cuenta. Inicia sesión y vuelve a \"Participar\".");
+
+        return await CrearPostulanteAsync(limpio, NombreDesdeCorreo(limpio), password);
+    }
+
     public async Task<CuentaDto> ObtenerAsync(int usuarioId)
     {
         var usuario = await ObtenerUsuarioAsync(usuarioId);
@@ -101,7 +136,7 @@ public class CuentaService : ICuentaService
             Telefono = usuario.Telefono,
             Rol = usuario.Rol,
             Activo = usuario.Activo,
-            Dni = await BuscarDniAsync(usuario),
+            Dni = OcultarDni(await BuscarDniAsync(usuario)),
             FechaRegistro = Mapeos.Utc(usuario.FechaRegistro),
         };
     }
@@ -157,4 +192,8 @@ public class CuentaService : ICuentaService
         await _usuarioData.ObtenerPorIdAsync(usuarioId) ?? throw ReglaNegocioException.NoEncontrada("Cuenta no encontrada");
 
     private static string NombreDesdeCorreo(string correo) => correo.Split('@')[0];
+
+    /// <summary>El DNI nunca sale completo: solo los 3 últimos dígitos (•••••678).</summary>
+    private static string? OcultarDni(string? dni) =>
+        string.IsNullOrEmpty(dni) || dni.Length < 3 ? dni : new string('•', dni.Length - 3) + dni[^3..];
 }

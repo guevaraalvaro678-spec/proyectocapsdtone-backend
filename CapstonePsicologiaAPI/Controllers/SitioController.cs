@@ -48,6 +48,15 @@ public class SitioController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Número, titular y QR de Yape para las donaciones de dinero (todo en null quita la sección).</summary>
+    [Authorize(Roles = RolesAdmin)]
+    [HttpPut("api/sitio/yape")]
+    public async Task<IActionResult> GuardarYape([FromBody] YapeGuardarDto datos)
+    {
+        await _sitioService.GuardarYapeAsync(datos);
+        return NoContent();
+    }
+
     [Authorize(Roles = RolesAdmin)]
     [HttpGet("api/iniciativa")]
     public async Task<ActionResult<List<IniciativaDto>>> Listar() =>

@@ -39,6 +39,14 @@ public class Usuario
     public int IntentosFallidos { get; set; }
     public DateTime? BloqueadoHasta { get; set; }
 
+    // Verificación en dos pasos: tras la contraseña se pide un código de 6 dígitos (correo o SMS).
+    // Solo se guardan los hashes del desafío y del código, nunca sus valores.
+    public string? DesafioHash { get; set; }
+    public DateTime? DesafioExpira { get; set; }
+    public string? CodigoVerificacionHash { get; set; }
+    public DateTime? CodigoVerificacionExpira { get; set; }
+    public int CodigoVerificacionIntentos { get; set; }
+
     // Recuperación de contraseña: solo se guarda el hash del token, nunca el token.
     public string? TokenRecuperacionHash { get; set; }
     public DateTime? TokenRecuperacionExpira { get; set; }

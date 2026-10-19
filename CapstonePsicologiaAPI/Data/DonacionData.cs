@@ -10,6 +10,9 @@ public interface IDonacionData
     Task<Donacion?> ObtenerPorIdAsync(int id);
     Task<List<Donacion>> ListarAsync(string? estado, string? buscar);
     Task<Dictionary<string, int>> ContarPorEstadoAsync();
+
+    /// <summary>Artículos de las donaciones recibidas, sumados por categoría y nombre (sin distinguir mayúsculas).</summary>
+    Task<List<DonacionArticulo>> InventarioAsync();
 }
 
 public class DonacionData : IDonacionData
@@ -52,6 +55,20 @@ public class DonacionData : IDonacionData
     public async Task<Dictionary<string, int>> ContarPorEstadoAsync() =>
         await _db.Donaciones.GroupBy(d => d.Estado).Select(g => new { g.Key, Total = g.Count() })
             .ToDictionaryAsync(x => x.Key, x => x.Total);
+
+    public Task<List<DonacionArticulo>> InventarioAsync() =>
+        _db.Donaciones.AsNoTracking()
+            .Where(d => d.Estado == EstadosDonacion.Recibida)
+            .SelectMany(d => d.Articulos)
+            .GroupBy(a => new { a.Categoria, Nombre = a.Nombre.Trim().ToLower() })
+            .OrderBy(g => g.Key.Categoria).ThenBy(g => g.Key.Nombre)
+            .Select(g => new DonacionArticulo
+            {
+                Categoria = g.Key.Categoria,
+                Nombre = g.Min(a => a.Nombre.Trim())!,
+                Cantidad = g.Sum(a => a.Cantidad),
+            })
+            .ToListAsync();
 }
 
 public interface INoticiaData

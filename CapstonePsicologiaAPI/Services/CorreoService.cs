@@ -8,6 +8,20 @@ namespace CapstonePsicologiaAPI.Services;
 public class CorreoService : ICorreoService
 {
     private const int MaximoDestinatarios = 500;
+
+    /// <summary>
+    /// Grupos de envío. Los valores "Usuarios" y "Psicologos" se mantienen por compatibilidad
+    /// (vienen del sistema anterior); el texto es el que corresponde a la ONG.
+    /// </summary>
+    public static readonly (string Valor, string Texto)[] Audiencias =
+    {
+        ("Usuarios", "Voluntarios y practicantes"),
+        ("Postulantes", "Postulantes"),
+        ("Psicologos", "Equipo de Recursos Humanos"),
+        ("Administradores", "Administradores"),
+        ("Todos", "Todos los miembros y el equipo"),
+        ("Individual", "Una persona (por correo)"),
+    };
     private const int CorreosPorTanda = 20;
     private const int MaximoHistorial = 200;
 
@@ -69,6 +83,7 @@ public class CorreoService : ICorreoService
             {
                 "Usuarios" => new[] { Roles.Voluntario, Roles.Practicante },
                 "Psicologos" => new[] { Roles.RRHH },
+                "Postulantes" => new[] { Roles.Postulante },
                 "Administradores" => new[] { Roles.SuperAdmin, Roles.Admin },
                 _ => new[] { Roles.Voluntario, Roles.Practicante, Roles.RRHH, Roles.SuperAdmin, Roles.Admin },
             };

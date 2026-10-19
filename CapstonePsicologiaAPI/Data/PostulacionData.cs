@@ -66,7 +66,7 @@ public class PostulacionData : IPostulacionData
         {
             var texto = buscar.Trim();
             consulta = consulta.Where(p => p.Codigo.Contains(texto) || p.Nombres.Contains(texto) || p.Apellidos.Contains(texto)
-                                           || p.Dni.Contains(texto) || p.Usuario!.Correo!.Contains(texto));
+                                           || (p.Dni != null && p.Dni.Contains(texto)) || p.Usuario!.Correo!.Contains(texto));
         }
 
         return consulta.OrderByDescending(p => p.FechaEnvio).ToListAsync();

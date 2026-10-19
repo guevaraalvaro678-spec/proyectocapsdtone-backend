@@ -46,6 +46,10 @@ public class AdminData : IAdminData
                 .SetProperty(u => u.BloqueadoHasta, (DateTime?)null));
     }
 
+    public Task<Usuario?> ObtenerPorIdAsync(int id) => _db.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+
+    public Task GuardarAsync() => _db.SaveChangesAsync();
+
     public async Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta)
     {
         await _db.Usuarios

@@ -27,6 +27,11 @@ public class CorreoController : ControllerBase
         return Ok(await _correoService.HistorialAsync());
     }
 
+    /// <summary>Grupos a los que se puede enviar una notificación, con el texto que ve el administrador.</summary>
+    [HttpGet("audiencias")]
+    public ActionResult<IEnumerable<object>> Audiencias() =>
+        Ok(CorreoService.Audiencias.Select(a => new { valor = a.Valor, texto = a.Texto }));
+
     /// <summary>Si el servidor tiene SMTP configurado y cuántos correos esperan salir.</summary>
     [HttpGet("estado")]
     public async Task<ActionResult<CorreoEstadoDto>> ObtenerEstado()

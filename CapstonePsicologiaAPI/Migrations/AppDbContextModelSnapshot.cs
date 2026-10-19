@@ -653,7 +653,6 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Departamento")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -662,17 +661,14 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Direccion")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Distrito")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Dni")
-                        .IsRequired()
                         .HasMaxLength(8)
                         .HasColumnType("nchar(8)")
                         .IsFixedLength();
@@ -688,7 +684,7 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.Property<DateTime>("FechaEnvio")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaNacimiento")
+                    b.Property<DateTime?>("FechaNacimiento")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("IniciativaDescripcion")
@@ -708,7 +704,6 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Provincia")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -966,9 +961,22 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.Property<int?>("LogoImagenId")
                         .HasColumnType("int");
 
+                    b.Property<string>("YapeNumero")
+                        .HasMaxLength(9)
+                        .HasColumnType("nvarchar(9)");
+
+                    b.Property<int?>("YapeQrImagenId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("YapeTitular")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LogoImagenId");
+
+                    b.HasIndex("YapeQrImagenId");
 
                     b.ToTable("SitioConfig");
                 });
@@ -1070,9 +1078,24 @@ namespace CapstonePsicologiaAPI.Migrations
                     b.Property<DateTime?>("BloqueadoHasta")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CodigoVerificacionExpira")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CodigoVerificacionHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CodigoVerificacionIntentos")
+                        .HasColumnType("int");
+
                     b.Property<string>("Correo")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("DesafioExpira")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DesafioHash")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Especialidad")
                         .HasMaxLength(100)
@@ -1149,26 +1172,27 @@ namespace CapstonePsicologiaAPI.Migrations
 
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.Voluntario", b =>
                 {
-                    b.Property<string>("Dni")
-                        .HasMaxLength(8)
-                        .HasColumnType("nchar(8)")
-                        .IsFixedLength();
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Apellidos")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Dni")
+                        .HasMaxLength(8)
+                        .HasColumnType("nchar(8)")
+                        .IsFixedLength();
+
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
+                    b.HasKey("UsuarioId");
 
-                    b.HasKey("Dni");
-
-                    b.HasIndex("UsuarioId")
-                        .IsUnique();
+                    b.HasIndex("Dni")
+                        .IsUnique()
+                        .HasFilter("[Dni] IS NOT NULL");
 
                     b.ToTable("Voluntarios");
                 });
@@ -1330,7 +1354,14 @@ namespace CapstonePsicologiaAPI.Migrations
                         .HasForeignKey("LogoImagenId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("CapstonePsicologiaAPI.Models.Imagen", "YapeQrImagen")
+                        .WithMany()
+                        .HasForeignKey("YapeQrImagenId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("LogoImagen");
+
+                    b.Navigation("YapeQrImagen");
                 });
 
             modelBuilder.Entity("CapstonePsicologiaAPI.Models.SolicitudOrientacion", b =>

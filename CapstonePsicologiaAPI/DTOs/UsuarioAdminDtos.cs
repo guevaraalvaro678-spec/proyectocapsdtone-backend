@@ -46,6 +46,6 @@ public class RestablecerPasswordDto
     [Required, StringLength(200)]
     public string Token { get; set; } = string.Empty;
 
-    [Required, MinLength(6), MaxLength(100)]
+    [Required, MinLength(8), MaxLength(100)]
     public string NuevaPassword { get; set; } = string.Empty;
 }

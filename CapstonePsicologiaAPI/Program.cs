@@ -74,6 +74,9 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 // Correo: cada correo se guarda en la base y el proceso en segundo plano lo envía si hay SMTP configurado.
 builder.Services.Configure<CorreoOpciones>(builder.Configuration.GetSection("Correo"));
 builder.Services.AddSingleton<ICorreoEnvio, SmtpCorreoEnvio>();
+
+// SMS para el código de verificación: solo se ofrece si Sms:Twilio está configurado.
+builder.Services.AddHttpClient<ISmsService, TwilioSmsService>();
 builder.Services.AddScoped<ICorreoData, CorreoData>();
 builder.Services.AddScoped<ICorreoService, CorreoService>();
 builder.Services.AddHostedService<EnvioCorreoWorker>();

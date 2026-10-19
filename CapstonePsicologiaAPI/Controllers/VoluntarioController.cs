@@ -20,7 +20,11 @@ public class VoluntarioController : ControllerBase
         _voluntarioService = voluntarioService;
     }
 
-    /// <summary>Registro público. La contraseña temporal se envía por correo.</summary>
+    /// <summary>
+    /// Alta directa de un voluntario. Solo la dirección: el camino normal es postular y ser aceptado.
+    /// La contraseña temporal se envía por correo.
+    /// </summary>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpPost("registro")]
     public async Task<IActionResult> Registrar([FromBody] VoluntarioRegistroDto datos)
     {

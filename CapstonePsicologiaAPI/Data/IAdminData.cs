@@ -14,4 +14,9 @@ public interface IAdminData
     Task RegistrarAccesoAsync(int usuarioId);
     Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta);
     Task ActualizarPasswordAsync(int usuarioId, string passwordHash);
+
+    Task<Usuario?> ObtenerPorIdAsync(int id);
+
+    /// <summary>Guarda los cambios hechos a una cuenta que se obtuvo de este repositorio.</summary>
+    Task GuardarAsync();
 }

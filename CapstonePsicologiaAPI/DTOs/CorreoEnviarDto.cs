@@ -7,7 +7,7 @@ public class CorreoEnviarDto : IValidatableObject
 {
     /// <summary>Usuarios, Psicologos, Administradores, Todos o Individual.</summary>
     [Required]
-    [RegularExpression("^(Usuarios|Psicologos|Administradores|Todos|Individual)$", ErrorMessage = "Audiencia no válida")]
+    [RegularExpression("^(Usuarios|Psicologos|Postulantes|Administradores|Todos|Individual)$", ErrorMessage = "Audiencia no válida")]
     public string Audiencia { get; set; } = string.Empty;
 
     /// <summary>Solo para la audiencia "Individual".</summary>

@@ -76,4 +76,38 @@ public class DashboardOngDto
     public int IniciativasPendientes { get; set; }
     public int HorariosPendientes { get; set; }
     public List<SesionEntrevistaDto> ProximasSesiones { get; set; } = new();
+
+    // ---- Indicadores ya calculados ----
+
+    /// <summary>Etapas del proceso: cuántas postulaciones llegaron a cada una (o más allá).</summary>
+    public List<EtapaEmbudoDto> Embudo { get; set; } = new();
+
+    /// <summary>Recibidas + habilitadas por agendar.</summary>
+    public int PendientesAtencion { get; set; }
+
+    /// <summary>Entrevista realizada + en calificación.</summary>
+    public int EnEvaluacion { get; set; }
+
+    public int Miembros { get; set; }
+    public int PorcentajeVoluntarios { get; set; }
+    public ResumenDonacionesDto ResumenDonaciones { get; set; } = new();
+}
+
+public class EtapaEmbudoDto
+{
+    public string Etiqueta { get; set; } = string.Empty;
+    public int Valor { get; set; }
+    public int Porcentaje { get; set; }
+    public bool Alerta { get; set; }
+}
+
+public class ResumenDonacionesDto
+{
+    public int Total { get; set; }
+    public int Pendientes { get; set; }
+    public int Recibidas { get; set; }
+    public int Desestimadas { get; set; }
+    public decimal PorcentajePendientes { get; set; }
+    public decimal PorcentajeRecibidas { get; set; }
+    public decimal PorcentajeDesestimadas { get; set; }
 }

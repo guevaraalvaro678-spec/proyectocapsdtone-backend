@@ -56,9 +56,36 @@ public class LogoGuardarDto
     public int? ImagenId { get; set; }
 }
 
-/// <summary>Lo que necesita el sitio público: logo e iniciativas activas.</summary>
+/// <summary>Datos de Yape para donaciones de dinero. Todo en null quita la sección del sitio.</summary>
+public class YapeGuardarDto
+{
+    [RegularExpression(@"^9\d{8}$", ErrorMessage = "El número de Yape debe ser un celular de 9 dígitos que empiece con 9")]
+    public string? Numero { get; set; }
+
+    [StringLength(100)]
+    public string? Titular { get; set; }
+
+    public int? QrImagenId { get; set; }
+}
+
+/// <summary>Lo que necesita el sitio público: logo, iniciativas activas y datos de Yape.</summary>
 public class SitioPublicoDto
 {
     public string? LogoUrl { get; set; }
     public List<IniciativaDto> Iniciativas { get; set; } = new();
+
+    /// <summary>Null si la ONG no configuró Yape.</summary>
+    public YapeDto? Yape { get; set; }
+}
+
+public class YapeDto
+{
+    public string? Numero { get; set; }
+
+    /// <summary>El número con espacios para leerlo fácil (987 654 321).</summary>
+    public string? NumeroVisible { get; set; }
+
+    public string? Titular { get; set; }
+    public int? QrImagenId { get; set; }
+    public string? QrUrl { get; set; }
 }

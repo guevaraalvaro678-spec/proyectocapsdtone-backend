@@ -16,6 +16,24 @@ public static class PlantillasCorreo
             enlace,
             "Ir a mi espacio");
 
+    public static string CodigoVerificacion(string nombre, string codigo, int minutos) =>
+        Envolver(
+            $"Tu código de verificación, {H(PrimerNombre(nombre))}",
+            "<p>Usa este código para terminar de iniciar sesión en AMAAC Perú:</p>" +
+            $"<p style=\"margin:20px 0;font-size:32px;font-weight:800;letter-spacing:8px;color:{Verde}\">{H(codigo)}</p>" +
+            $"<p>Vence en {minutos} minutos. Si no fuiste tú, cambia tu contraseña: alguien conoce la actual.</p>",
+            null,
+            null);
+
+    public static string AlertaIntentoFallido(string nombre, DateTime fechaUtc, string enlace) =>
+        Envolver(
+            $"Alguien intentó entrar a tu cuenta, {H(PrimerNombre(nombre))}",
+            $"<p>El <strong>{FechaLima(fechaUtc)}</strong> hubo dos intentos seguidos de entrar a tu cuenta con una contraseña incorrecta.</p>" +
+            "<p>Si fuiste tú, no tienes que hacer nada. Si no, te recomendamos cambiar tu contraseña. " +
+            "Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.</p>",
+            enlace,
+            "Cambiar mi contraseña");
+
     public static string CuentaBloqueada(string nombre, int minutos, string enlace) =>
         Envolver(
             $"Bloqueamos tu cuenta por seguridad, {H(PrimerNombre(nombre))}",
