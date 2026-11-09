@@ -10,6 +10,8 @@ namespace CapstonePsicologiaAPI.Controllers;
 /// <summary>Los horarios que cada psicólogo deja disponibles para que los pacientes reserven.</summary>
 [ApiController]
 [Route("api/disponibilidad")]
+// Módulo de psicología anterior: desactivado (la ONG no lo usa y estaba expuesto). El código se conserva.
+[NonController]
 public class DisponibilidadController : ControllerBase
 {
     private readonly IDisponibilidadService _disponibilidadService;

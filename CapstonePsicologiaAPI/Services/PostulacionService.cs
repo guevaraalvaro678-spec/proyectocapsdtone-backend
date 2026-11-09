@@ -17,6 +17,9 @@ public interface IPostulacionService
     Task<List<PostulacionDto>> ListarAsync(string? tipo, string? estado, string? buscar);
     Task<PostulacionDto> ObtenerAsync(int id);
     Task<PostulacionDto> CambiarEstadoAsync(int id, PostulacionEstadoDto datos, int actorId);
+
+    /// <summary>El mismo cambio para varias postulaciones; cada una se procesa por separado y se informa cuáles fallaron.</summary>
+    Task<ResultadoMasivoDto> CambiarEstadoVariasAsync(PostulacionEstadoMasivoDto datos, int actorId);
     Task<PostulacionResumenDto> ResumenAsync(string? tipo, string? estado, string? buscar);
 
     /// <summary>Las postulaciones filtradas en CSV (se abre en Excel).</summary>
@@ -310,12 +313,11 @@ public class PostulacionService : IPostulacionService
         if (EstadosPostulacion.EsFinal(postulacion.Estado))
             throw ReglaNegocioException.Conflicto("Esta postulación ya tiene un resultado final");
 
-        if (!EstadosPostulacion.PuedePasar(postulacion.Estado, datos.Estado))
+        if (!EstadosPostulacion.PuedePasar(postulacion.Estado, datos.Estado, postulacion.Tipo))
             throw ReglaNegocioException.Invalida(
                 $"No se puede pasar de \"{EstadosPostulacion.Etiqueta(postulacion.Estado)}\" a \"{EstadosPostulacion.Etiqueta(datos.Estado)}\"");
 
         var usuario = postulacion.Usuario!;
-        postulacion.NotaEvaluacion = Limpiar(datos.NotaEvaluacion) ?? postulacion.NotaEvaluacion;
 
         switch (datos.Estado)
         {
@@ -337,6 +339,7 @@ public class PostulacionService : IPostulacionService
                 break;
         }
 
+        postulacion.NotaEvaluacion = Limpiar(datos.NotaEvaluacion) ?? postulacion.NotaEvaluacion;
         postulacion.Estado = datos.Estado;
         postulacion.FechaActualizacion = DateTime.UtcNow;
         _postulacionData.AgregarHistorial(new HistorialPostulacion
@@ -350,6 +353,27 @@ public class PostulacionService : IPostulacionService
 
         await NotificarAsync(postulacion, usuario);
         return await ADtoAsync(postulacion, incluirCv: true);
+    }
+
+    public async Task<ResultadoMasivoDto> CambiarEstadoVariasAsync(PostulacionEstadoMasivoDto datos, int actorId)
+    {
+        var resultado = new ResultadoMasivoDto();
+        foreach (var id in datos.Ids.Distinct())
+        {
+            try
+            {
+                await CambiarEstadoAsync(id, datos, actorId);
+                resultado.Procesadas++;
+            }
+            catch (ReglaNegocioException ex)
+            {
+                // Lo que quedó a medias de esta postulación no debe guardarse junto con la siguiente.
+                _postulacionData.DescartarCambios();
+                var codigo = (await _postulacionData.ObtenerPorIdAsync(id))?.Codigo ?? $"#{id}";
+                resultado.Errores.Add(new ErrorMasivoDto { Id = id, Codigo = codigo, Mensaje = ex.Message });
+            }
+        }
+        return resultado;
     }
 
     private async Task AsignarSesionAsync(Postulacion postulacion, int? sesionId)
@@ -479,7 +503,7 @@ public class PostulacionService : IPostulacionService
                     Fecha = Mapeos.Utc(h.Fecha),
                 }).ToList()
                 : null,
-            Acciones = EstadosPostulacion.Acciones(p.Estado),
+            Acciones = EstadosPostulacion.Acciones(p.Estado, p.Tipo),
         };
     }
 

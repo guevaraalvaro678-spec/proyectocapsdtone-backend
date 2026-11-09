@@ -94,24 +94,37 @@ public static class EstadosPostulacion
 
     public static bool EsFinal(string estado) => estado is Aceptada or NoAdmitida;
 
-    /// <summary>Pasos permitidos del proceso. "No admitida" se puede dar en cualquier etapa abierta.</summary>
+    /// <summary>
+    /// Pasos permitidos del proceso. "No admitida" se puede dar en cualquier etapa abierta.
+    /// Atajos para agilizar: se puede agendar sin habilitar antes y, tras la entrevista, aceptar sin pasar por calificación.
+    /// </summary>
     private static readonly Dictionary<string, string[]> Siguientes = new()
     {
-        [Recibida] = new[] { HabilitadaEntrevista },
+        [Recibida] = new[] { HabilitadaEntrevista, EntrevistaAgendada },
         [HabilitadaEntrevista] = new[] { EntrevistaAgendada },
         // Volver a "Entrevista agendada" estando agendada = cambiar de sesión.
         [EntrevistaAgendada] = new[] { EntrevistaAgendada, EntrevistaRealizada },
-        [EntrevistaRealizada] = new[] { EnCalificacion },
+        [EntrevistaRealizada] = new[] { EnCalificacion, Aceptada },
         [EnCalificacion] = new[] { Aceptada },
     };
 
-    /// <summary>Estados a los que puede pasar una postulación que está en <paramref name="estado"/>.</summary>
-    public static List<string> Acciones(string estado) =>
-        EsFinal(estado) || !Siguientes.TryGetValue(estado, out var permitidos)
-            ? new List<string>()
-            : permitidos.Append(NoAdmitida).ToList();
+    /// <summary>
+    /// Estados a los que puede pasar una postulación que está en <paramref name="estado"/>.
+    /// El voluntariado general no exige entrevista: se puede aceptar apenas llega.
+    /// </summary>
+    public static List<string> Acciones(string estado, string tipo)
+    {
+        if (EsFinal(estado) || !Siguientes.TryGetValue(estado, out var permitidos))
+            return new List<string>();
 
-    public static bool PuedePasar(string desde, string hacia) => Acciones(desde).Contains(hacia);
+        var acciones = permitidos.ToList();
+        if (tipo == TiposPostulacion.Voluntario && estado is Recibida or HabilitadaEntrevista)
+            acciones.Add(Aceptada);
+        acciones.Add(NoAdmitida);
+        return acciones;
+    }
+
+    public static bool PuedePasar(string desde, string hacia, string tipo) => Acciones(desde, tipo).Contains(hacia);
 
     /// <summary>Texto para mostrar cada estado en mensajes y correos.</summary>
     public static string Etiqueta(string estado) => estado switch

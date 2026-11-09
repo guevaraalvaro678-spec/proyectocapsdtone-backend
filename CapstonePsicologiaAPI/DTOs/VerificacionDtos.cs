@@ -36,6 +36,9 @@ public class CodigoEnviadoDto
 {
     public string Destino { get; set; } = string.Empty;
     public int ExpiraEnSegundos { get; set; }
+
+    /// <summary>Cuánto hay que esperar para pedir otro código.</summary>
+    public int ReenviarEnSegundos { get; set; }
 }
 
 public class CodigoVerificarDto

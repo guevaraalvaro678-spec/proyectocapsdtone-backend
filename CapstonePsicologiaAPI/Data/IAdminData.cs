@@ -13,6 +13,7 @@ public interface IAdminData
     /// <summary>Anota la fecha del último inicio de sesión y limpia los intentos fallidos.</summary>
     Task RegistrarAccesoAsync(int usuarioId);
     Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta);
+    Task RegistrarAlertaAsync(AlertaSeguridad alerta);
     Task ActualizarPasswordAsync(int usuarioId, string passwordHash);
 
     Task<Usuario?> ObtenerPorIdAsync(int id);

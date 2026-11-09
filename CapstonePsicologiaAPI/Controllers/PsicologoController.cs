@@ -9,6 +9,8 @@ namespace CapstonePsicologiaAPI.Controllers;
 
 [ApiController]
 [Route("api/psicologo")]
+// Módulo de psicología anterior: desactivado (la ONG no lo usa y estaba expuesto). El código se conserva.
+[NonController]
 public class PsicologoController : ControllerBase
 {
     private const string RolesAdmin = $"{Roles.SuperAdmin},{Roles.Admin}";

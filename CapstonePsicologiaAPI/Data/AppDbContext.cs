@@ -1,4 +1,5 @@
 using CapstonePsicologiaAPI.Models;
+using CapstonePsicologiaAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace CapstonePsicologiaAPI.Data;
@@ -32,6 +33,9 @@ public class AppDbContext : DbContext
     public DbSet<Donacion> Donaciones => Set<Donacion>();
     public DbSet<DonacionArticulo> DonacionArticulos => Set<DonacionArticulo>();
     public DbSet<Noticia> Noticias => Set<Noticia>();
+    public DbSet<HistorialDonacion> HistorialDonaciones => Set<HistorialDonacion>();
+    public DbSet<Anuncio> Anuncios => Set<Anuncio>();
+    public DbSet<AlertaSeguridad> AlertasSeguridad => Set<AlertaSeguridad>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -267,9 +271,12 @@ public class AppDbContext : DbContext
             e.Property(d => d.Codigo).HasMaxLength(20).IsRequired();
             e.HasIndex(d => d.Codigo).IsUnique();
             e.Property(d => d.DonanteNombre).HasMaxLength(150).IsRequired();
-            e.Property(d => d.Telefono).HasMaxLength(30).IsRequired();
+            // HU-20: cifrado en la base; la API lo lee y escribe en claro.
+            e.Property(d => d.Telefono).HasMaxLength(120).IsRequired()
+                .HasConversion(v => CifradoDatos.Cifrar(v), v => CifradoDatos.Descifrar(v));
             e.Property(d => d.Estado).HasMaxLength(30).IsRequired();
             e.Property(d => d.Observaciones).HasMaxLength(500);
+            e.Property(d => d.DestinoEntrega).HasMaxLength(200);
             e.HasMany(d => d.Articulos).WithOne().HasForeignKey(a => a.DonacionId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(d => d.Estado);
         });
@@ -278,6 +285,31 @@ public class AppDbContext : DbContext
         {
             e.Property(a => a.Categoria).HasMaxLength(30).IsRequired();
             e.Property(a => a.Nombre).HasMaxLength(150).IsRequired();
+        });
+
+        modelBuilder.Entity<HistorialDonacion>(e =>
+        {
+            e.Property(h => h.Accion).HasMaxLength(40).IsRequired();
+            e.Property(h => h.Detalle).HasMaxLength(500);
+            e.HasOne<Donacion>().WithMany().HasForeignKey(h => h.DonacionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.Usuario).WithMany().HasForeignKey(h => h.UsuarioId).OnDelete(DeleteBehavior.NoAction);
+            e.HasIndex(h => h.DonacionId);
+        });
+
+        modelBuilder.Entity<Anuncio>(e =>
+        {
+            e.Property(a => a.Texto).HasMaxLength(300).IsRequired();
+            e.Property(a => a.Enlace).HasMaxLength(300);
+            e.Property(a => a.Tipo).HasMaxLength(20).IsRequired();
+            e.HasIndex(a => new { a.Activo, a.Desde });
+        });
+
+        modelBuilder.Entity<AlertaSeguridad>(e =>
+        {
+            e.Property(a => a.Tipo).HasMaxLength(40).IsRequired();
+            e.Property(a => a.Detalle).HasMaxLength(500).IsRequired();
+            e.HasOne(a => a.Usuario).WithMany().HasForeignKey(a => a.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(a => new { a.Revisada, a.Fecha });
         });
 
         modelBuilder.Entity<Noticia>(e =>

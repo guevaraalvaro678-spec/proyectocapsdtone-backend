@@ -10,6 +10,8 @@ namespace CapstonePsicologiaAPI.Controllers;
 
 [ApiController]
 [Route("api/cita")]
+// Módulo de psicología anterior: desactivado (la ONG no lo usa y estaba expuesto). El código se conserva.
+[NonController]
 public class CitaController : ControllerBase
 {
     private const string RolesAdmin = $"{Roles.SuperAdmin},{Roles.Admin}";

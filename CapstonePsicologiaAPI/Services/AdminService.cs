@@ -123,7 +123,10 @@ public class AdminService : IAdminService
         // Evita mandar códigos en ráfaga.
         var creadoEn = usuario.CodigoVerificacionExpira?.AddMinutes(-MinutosCodigo);
         if (creadoEn > DateTime.UtcNow.AddSeconds(-SegundosEntreCodigos))
-            throw ReglaNegocioException.Conflicto("Espera unos segundos antes de pedir otro código");
+        {
+            var faltan = (int)Math.Ceiling((creadoEn.Value.AddSeconds(SegundosEntreCodigos) - DateTime.UtcNow).TotalSeconds);
+            throw ReglaNegocioException.Conflicto($"Espera {faltan} segundos antes de pedir otro código");
+        }
 
         var codigo = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
         usuario.CodigoVerificacionHash = Hash(codigo);
@@ -152,7 +155,7 @@ public class AdminService : IAdminService
             throw ReglaNegocioException.Invalida("No se pudo enviar el código. Intenta de nuevo en un momento.");
         }
 
-        return new CodigoEnviadoDto { Destino = canal.Destino, ExpiraEnSegundos = MinutosCodigo * 60 };
+        return new CodigoEnviadoDto { Destino = canal.Destino, ExpiraEnSegundos = MinutosCodigo * 60, ReenviarEnSegundos = SegundosEntreCodigos };
     }
 
     public async Task<AdminSesionDto> VerificarCodigoAsync(CodigoVerificarDto datos)
@@ -241,14 +244,20 @@ public class AdminService : IAdminService
 
     public async Task<AdminDto?> RegistrarAsync(AdminRegistroDto registro)
     {
-        var nombre = Normalizar(registro.Usuario);
+        var correo = Normalizar(registro.Correo);
 
-        if (await _adminData.ExisteNombreUsuarioAsync(nombre))
+        // El correo es también el usuario para iniciar sesión.
+        if (await _adminData.ObtenerPorUsuarioOCorreoAsync(correo) is not null)
             return null;
 
-        var usuario = new Usuario { NombreUsuario = nombre, Nombre = registro.Usuario.Trim(), Rol = registro.Rol };
+        var usuario = new Usuario { NombreUsuario = correo, Correo = correo, Nombre = registro.Nombre.Trim(), Rol = registro.Rol };
         usuario.PasswordHash = _hasher.HashPassword(usuario, registro.Password);
         await _adminData.CrearAsync(usuario);
+
+        await _correo.EncolarAsync(correo, usuario.Nombre, "Tu cuenta del equipo AMAAC Perú está lista",
+            PlantillasCorreo.CuentaGestion(usuario.Nombre, registro.Rol == Roles.RRHH ? "Recursos Humanos" : registro.Rol == Roles.SuperAdmin ? "Super administrador" : "Administrador",
+                correo, $"{_correo.FrontUrl}/login"),
+            TiposCorreo.Bienvenida);
 
         return new AdminDto { Id = usuario.Id, Usuario = usuario.NombreUsuario, Rol = usuario.Rol };
     }
@@ -260,7 +269,15 @@ public class AdminService : IAdminService
         {
             await _adminData.RegistrarIntentoFallidoAsync(usuario.Id, intentos, null);
 
-            // Segundo intento fallido: se avisa al dueño por si no fue él.
+            // Segundo intento fallido: se avisa al dueño por si no fue él y queda como alerta para el equipo.
+            if (intentos == IntentosParaAviso)
+                await _adminData.RegistrarAlertaAsync(new AlertaSeguridad
+                {
+                    Tipo = TiposAlerta.IntentosFallidos,
+                    UsuarioId = usuario.Id,
+                    Detalle = $"{intentos} contraseñas incorrectas seguidas para la cuenta {usuario.Correo ?? usuario.NombreUsuario} ({usuario.Rol})",
+                });
+
             if (intentos == IntentosParaAviso && usuario.Correo is not null)
             {
                 await _correo.EncolarAsync(usuario.Correo, usuario.Nombre, "Alguien intentó entrar a tu cuenta",
@@ -271,6 +288,12 @@ public class AdminService : IAdminService
         }
 
         await _adminData.RegistrarIntentoFallidoAsync(usuario.Id, 0, DateTime.UtcNow.AddMinutes(MinutosBloqueo));
+        await _adminData.RegistrarAlertaAsync(new AlertaSeguridad
+        {
+            Tipo = TiposAlerta.CuentaBloqueada,
+            UsuarioId = usuario.Id,
+            Detalle = $"{MaximoIntentos} intentos fallidos: la cuenta {usuario.Correo ?? usuario.NombreUsuario} ({usuario.Rol}) quedó bloqueada {MinutosBloqueo} minutos",
+        });
         if (usuario.Correo is not null)
         {
             await _correo.EncolarAsync(usuario.Correo, usuario.Nombre, "Tu cuenta fue bloqueada temporalmente",

@@ -205,6 +205,9 @@ public class SesionEntrevistaDto
     /// <summary>Programada, todavía no termina y le quedan cupos: se le pueden agendar postulantes.</summary>
     public bool Disponible { get; set; }
 
+    /// <summary>Ya terminó y sigue como programada: hay que marcarla realizada (o cancelada).</summary>
+    public bool PorCerrar { get; set; }
+
     public int PorcentajeOcupacion { get; set; }
 }
 

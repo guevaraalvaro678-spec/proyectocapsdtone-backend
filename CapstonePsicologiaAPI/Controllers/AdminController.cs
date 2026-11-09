@@ -57,7 +57,7 @@ public class AdminController : ControllerBase
         var admin = await _adminService.RegistrarAsync(registro);
 
         if (admin is null)
-            return Conflict(new { mensaje = "Ese nombre de usuario ya existe" });
+            return Conflict(new { mensaje = "Ese correo ya tiene una cuenta" });
 
         return StatusCode(StatusCodes.Status201Created, admin);
     }

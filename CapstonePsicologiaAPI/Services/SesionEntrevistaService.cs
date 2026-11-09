@@ -173,6 +173,7 @@ public class SesionEntrevistaService : ISesionEntrevistaService
         Inscritos = inscritos,
         Estado = s.Estado,
         Disponible = s.Estado == EstadosSesion.Programada && s.Fin > DateTime.UtcNow && inscritos < s.Cupo,
+        PorCerrar = s.Estado == EstadosSesion.Programada && s.Fin <= DateTime.UtcNow,
         PorcentajeOcupacion = s.Cupo == 0 ? 0 : (int)Math.Round(inscritos * 100.0 / s.Cupo, MidpointRounding.AwayFromZero),
     };
 }

@@ -50,6 +50,12 @@ public class AdminData : IAdminData
 
     public Task GuardarAsync() => _db.SaveChangesAsync();
 
+    public async Task RegistrarAlertaAsync(AlertaSeguridad alerta)
+    {
+        _db.AlertasSeguridad.Add(alerta);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task RegistrarIntentoFallidoAsync(int usuarioId, int intentos, DateTime? bloqueadoHasta)
     {
         await _db.Usuarios

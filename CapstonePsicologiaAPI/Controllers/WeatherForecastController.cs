@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CapstonePsicologiaAPI.Controllers
 {
+    // Plantilla de ejemplo de ASP.NET: desactivada.
+    [NonController]
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase

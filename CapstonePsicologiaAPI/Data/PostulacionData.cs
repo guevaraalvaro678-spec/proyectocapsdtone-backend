@@ -7,6 +7,9 @@ public interface IPostulacionData
 {
     Task CrearAsync(Postulacion postulacion);
     Task GuardarAsync();
+
+    /// <summary>Olvida los cambios sin guardar (por ejemplo, tras un error en un cambio masivo).</summary>
+    void DescartarCambios();
     Task<Postulacion?> ObtenerPorIdAsync(int id);
 
     /// <summary>La postulación más reciente de una cuenta.</summary>
@@ -41,6 +44,8 @@ public class PostulacionData : IPostulacionData
     }
 
     public Task GuardarAsync() => _db.SaveChangesAsync();
+
+    public void DescartarCambios() => _db.ChangeTracker.Clear();
 
     // El CV se incluye solo para saber su nombre; los bytes no se cargan en las listas (ver Select en ListarAsync).
     public Task<Postulacion?> ObtenerPorIdAsync(int id) =>

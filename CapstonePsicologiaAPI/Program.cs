@@ -81,6 +81,14 @@ builder.Services.AddScoped<ICorreoData, CorreoData>();
 builder.Services.AddScoped<ICorreoService, CorreoService>();
 builder.Services.AddHostedService<EnvioCorreoWorker>();
 
+builder.Services.AddScoped<IAnuncioService, AnuncioService>();
+builder.Services.AddScoped<IAlertaService, AlertaService>();
+builder.Services.AddScoped<IRespaldoService, RespaldoService>();
+builder.Services.AddHostedService<RespaldoWorker>();
+
+// HU-20: clave del cifrado de datos sensibles (si falta, se deriva de la clave del JWT para no dejar la API sin arrancar).
+CifradoDatos.Configurar(builder.Configuration["Seguridad:ClaveCifrado"] is { Length: > 0 } clave ? clave : builder.Configuration["Jwt:Key"]!);
+
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

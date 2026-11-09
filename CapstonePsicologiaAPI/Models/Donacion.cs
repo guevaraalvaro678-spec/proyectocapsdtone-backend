@@ -2,7 +2,8 @@ namespace CapstonePsicologiaAPI.Models;
 
 /// <summary>
 /// Intención de donar artículos físicos (la plataforma no recibe dinero). La persona la registra desde el sitio
-/// público y la entrega en la sede; el administrador marca si se recibió o se desestimó.
+/// público y la entrega en la sede; el administrador marca si se recibió o se desestimó y, al repartirla,
+/// registra a quién se entregó. El teléfono se guarda cifrado.
 /// </summary>
 public class Donacion
 {
@@ -18,7 +19,26 @@ public class Donacion
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
     public DateTime? FechaRevision { get; set; }
 
+    /// <summary>A quién o a qué actividad se entregaron los artículos (al pasar a Entregada).</summary>
+    public string? DestinoEntrega { get; set; }
+    public DateTime? FechaEntrega { get; set; }
+
     public List<DonacionArticulo> Articulos { get; set; } = new();
+}
+
+/// <summary>Auditoría de una donación (HU-21): registro, cambios de estado, notas y entrega, con quién y cuándo.</summary>
+public class HistorialDonacion
+{
+    public int Id { get; set; }
+    public int DonacionId { get; set; }
+    public string Accion { get; set; } = string.Empty;
+    public string? Detalle { get; set; }
+
+    /// <summary>Quién lo hizo (null cuando la registró el donante desde el sitio).</summary>
+    public int? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
+
+    public DateTime Fecha { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>Un artículo dentro de una donación (por ejemplo, 50 cuadernos A4).</summary>
@@ -36,6 +56,29 @@ public static class EstadosDonacion
     public const string PendienteRecepcion = "PendienteRecepcion";
     public const string Recibida = "Recibida";
     public const string Desestimada = "Desestimada";
+
+    /// <summary>Ya se repartió: sale del inventario.</summary>
+    public const string Entregada = "Entregada";
+
+    /// <summary>Recibida se puede devolver a pendiente y Desestimada reabrir, por si hubo un error.</summary>
+    private static readonly Dictionary<string, string[]> Siguientes = new()
+    {
+        [PendienteRecepcion] = new[] { Recibida, Desestimada },
+        [Recibida] = new[] { Entregada, PendienteRecepcion },
+        [Desestimada] = new[] { PendienteRecepcion },
+    };
+
+    public static List<string> Acciones(string estado) =>
+        Siguientes.TryGetValue(estado, out var permitidos) ? permitidos.ToList() : new List<string>();
+
+    public static string Etiqueta(string estado) => estado switch
+    {
+        PendienteRecepcion => "Pendiente de recepción",
+        Recibida => "Recibida",
+        Desestimada => "Desestimada",
+        Entregada => "Entregada",
+        _ => estado,
+    };
 }
 
 public static class CategoriasDonacion

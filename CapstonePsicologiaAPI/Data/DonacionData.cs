@@ -11,6 +11,12 @@ public interface IDonacionData
     Task<List<Donacion>> ListarAsync(string? estado, string? buscar);
     Task<Dictionary<string, int>> ContarPorEstadoAsync();
 
+    /// <summary>Anota un movimiento en la auditoría; se guarda con el siguiente GuardarAsync.</summary>
+    void AgregarHistorial(HistorialDonacion registro);
+
+    /// <summary>Historial de varias donaciones, del más reciente al más antiguo.</summary>
+    Task<List<HistorialDonacion>> ListarHistorialAsync(int[] donacionIds);
+
     /// <summary>Artículos de las donaciones recibidas, sumados por categoría y nombre (sin distinguir mayúsculas).</summary>
     Task<List<DonacionArticulo>> InventarioAsync();
 }
@@ -55,6 +61,14 @@ public class DonacionData : IDonacionData
     public async Task<Dictionary<string, int>> ContarPorEstadoAsync() =>
         await _db.Donaciones.GroupBy(d => d.Estado).Select(g => new { g.Key, Total = g.Count() })
             .ToDictionaryAsync(x => x.Key, x => x.Total);
+
+    public void AgregarHistorial(HistorialDonacion registro) => _db.HistorialDonaciones.Add(registro);
+
+    public Task<List<HistorialDonacion>> ListarHistorialAsync(int[] donacionIds) =>
+        _db.HistorialDonaciones.AsNoTracking().Include(h => h.Usuario)
+            .Where(h => donacionIds.Contains(h.DonacionId))
+            .OrderByDescending(h => h.Fecha).ThenByDescending(h => h.Id)
+            .ToListAsync();
 
     public Task<List<DonacionArticulo>> InventarioAsync() =>
         _db.Donaciones.AsNoTracking()

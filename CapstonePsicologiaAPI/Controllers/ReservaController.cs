@@ -11,6 +11,8 @@ namespace CapstonePsicologiaAPI.Controllers;
 [ApiController]
 [Authorize(Roles = Roles.Usuario)]
 [Route("api/reserva")]
+// Módulo de psicología anterior: desactivado (la ONG no lo usa y estaba expuesto). El código se conserva.
+[NonController]
 public class ReservaController : ControllerBase
 {
     private readonly IReservaService _reservaService;

@@ -93,6 +93,12 @@ public class PostulacionController : ControllerBase
     public async Task<ActionResult<PostulacionDto>> CambiarEstado(int id, [FromBody] PostulacionEstadoDto datos) =>
         Ok(await _postulacionService.CambiarEstadoAsync(id, datos, UsuarioId()));
 
+    /// <summary>Mismo cambio de estado para varias postulaciones (por ejemplo, agendarlas todas en una sesión).</summary>
+    [Authorize(Roles = RolesGestion)]
+    [HttpPut("api/postulacion/estado")]
+    public async Task<ActionResult<ResultadoMasivoDto>> CambiarEstadoVarias([FromBody] PostulacionEstadoMasivoDto datos) =>
+        Ok(await _postulacionService.CambiarEstadoVariasAsync(datos, UsuarioId()));
+
     private int UsuarioId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private string Rol() => User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
 }

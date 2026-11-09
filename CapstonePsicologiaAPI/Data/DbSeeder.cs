@@ -25,12 +25,28 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
+        await CifrarDatosAnterioresAsync(db);
+
         if (await db.Usuarios.AnyAsync())
             return;
 
         var admin = new Usuario { NombreUsuario = "admin", Rol = Roles.SuperAdmin };
         admin.PasswordHash = hasher.HashPassword(admin, "123");
         db.Usuarios.Add(admin);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>HU-20: cifra los teléfonos de donantes guardados antes de activar el cifrado (solo los que siguen en claro).</summary>
+    private static async Task CifrarDatosAnterioresAsync(AppDbContext db)
+    {
+        var ids = await db.Database
+            .SqlQuery<int>($"SELECT Id AS [Value] FROM Donaciones WHERE Telefono NOT LIKE {CapstonePsicologiaAPI.Services.CifradoDatos.Prefijo + "%"}")
+            .ToListAsync();
+        if (ids.Count == 0)
+            return;
+
+        foreach (var donacion in await db.Donaciones.Where(d => ids.Contains(d.Id)).ToListAsync())
+            db.Entry(donacion).Property(d => d.Telefono).IsModified = true;
         await db.SaveChangesAsync();
     }
 }

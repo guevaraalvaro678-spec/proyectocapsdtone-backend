@@ -29,11 +29,15 @@ public class DonacionCrearDto
 
 public class DonacionEstadoDto
 {
-    [Required, RegularExpression("^(PendienteRecepcion|Recibida|Desestimada)$", ErrorMessage = "Estado no válido")]
+    [Required, RegularExpression("^(PendienteRecepcion|Recibida|Desestimada|Entregada)$", ErrorMessage = "Estado no válido")]
     public string Estado { get; set; } = string.Empty;
 
     [StringLength(500)]
     public string? Observaciones { get; set; }
+
+    /// <summary>Obligatorio al pasar a Entregada.</summary>
+    [StringLength(200)]
+    public string? DestinoEntrega { get; set; }
 }
 
 public class DonacionDto
@@ -45,7 +49,14 @@ public class DonacionDto
     public string Estado { get; set; } = string.Empty;
     public string? Observaciones { get; set; }
     public DateTime FechaRegistro { get; set; }
+    public DateTime? FechaRevision { get; set; }
+    public string? DestinoEntrega { get; set; }
+    public DateTime? FechaEntrega { get; set; }
     public List<DonacionArticuloDto> Articulos { get; set; } = new();
+
+    /// <summary>Estados a los que se puede pasar desde el actual.</summary>
+    public List<string> Acciones { get; set; } = new();
+    public List<HistorialDonacionDto> Historial { get; set; } = new();
 }
 
 public class DonacionObservacionesDto
@@ -60,6 +71,7 @@ public class DonacionResumenDto
     public int Pendientes { get; set; }
     public int Recibidas { get; set; }
     public int Desestimadas { get; set; }
+    public int Entregadas { get; set; }
     public int Total { get; set; }
 
     /// <summary>Artículos de las donaciones recibidas, sumados por categoría y nombre.</summary>

@@ -42,6 +42,15 @@ public static class PlantillasCorreo
             enlace,
             "Recuperar mi contraseña");
 
+    public static string CuentaGestion(string nombre, string rol, string correo, string enlace) =>
+        Envolver(
+            $"¡Hola, {H(PrimerNombre(nombre))}!",
+            $"<p>Se creó tu cuenta del equipo de AMAAC Perú con el perfil <strong>{H(rol)}</strong>.</p>" +
+            $"<p>Entra con <strong>{H(correo)}</strong> y la contraseña que te dieron. Al iniciar sesión te enviaremos un código de verificación a este correo; " +
+            "después puedes cambiar tu contraseña en \"Mi cuenta y seguridad\".</p>",
+            enlace,
+            "Iniciar sesión");
+
     public static string CuentaCreada(string nombre, string enlace) =>
         Envolver(
             $"¡Hola, {H(PrimerNombre(nombre))}!",

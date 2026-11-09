@@ -8,9 +8,9 @@ public interface IDonacionService
 {
     Task<DonacionDto> RegistrarAsync(DonacionCrearDto datos);
     Task<List<DonacionDto>> ListarAsync(string? estado, string? buscar);
-    Task<DonacionDto> CambiarEstadoAsync(int id, DonacionEstadoDto datos);
+    Task<DonacionDto> CambiarEstadoAsync(int id, DonacionEstadoDto datos, int actorId);
     Task<DonacionResumenDto> ResumenAsync();
-    Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones);
+    Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones, int actorId);
 }
 
 /// <summary>Donaciones de artículos físicos: se registran en el sitio público y el administrador confirma su recepción.</summary>
@@ -39,39 +39,78 @@ public class DonacionService : IDonacionService
         };
 
         await _donacionData.CrearAsync(donacion);
-        donacion.Codigo = $"DON-{donacion.FechaRegistro.Year}-{donacion.Id:000}";
-        await _donacionData.GuardarAsync();
 
-        return ADto(donacion);
+        donacion.Codigo = $"DON-{donacion.FechaRegistro.Year}-{donacion.Id:000}";
+        _donacionData.AgregarHistorial(new HistorialDonacion
+        {
+            DonacionId = donacion.Id,
+            Accion = "Registrada",
+            Detalle = $"Desde el sitio web: {donacion.Articulos.Sum(a => a.Cantidad)} artículo(s)",
+        });
+        await _donacionData.GuardarAsync();
+        return await ADtoAsync(donacion);
     }
 
-    public async Task<List<DonacionDto>> ListarAsync(string? estado, string? buscar) =>
-        (await _donacionData.ListarAsync(estado, buscar)).Select(ADto).ToList();
+    public async Task<List<DonacionDto>> ListarAsync(string? estado, string? buscar)
+    {
+        var lista = await _donacionData.ListarAsync(estado, buscar);
+        var historial = (await _donacionData.ListarHistorialAsync(lista.Select(d => d.Id).ToArray())).ToLookup(h => h.DonacionId);
+        return lista.Select(d => ADto(d, historial[d.Id])).ToList();
+    }
 
-    public async Task<DonacionDto> CambiarEstadoAsync(int id, DonacionEstadoDto datos)
+    public async Task<DonacionDto> CambiarEstadoAsync(int id, DonacionEstadoDto datos, int actorId)
     {
         var donacion = await _donacionData.ObtenerPorIdAsync(id)
                        ?? throw ReglaNegocioException.NoEncontrada("Donación no encontrada");
 
-        if (donacion.Estado == datos.Estado)
-            throw ReglaNegocioException.Conflicto($"La donación ya está en ese estado");
+        if (!EstadosDonacion.Acciones(donacion.Estado).Contains(datos.Estado))
+            throw ReglaNegocioException.Invalida(
+                $"No se puede pasar de \"{EstadosDonacion.Etiqueta(donacion.Estado)}\" a \"{EstadosDonacion.Etiqueta(datos.Estado)}\"");
 
+        var destino = string.IsNullOrWhiteSpace(datos.DestinoEntrega) ? null : datos.DestinoEntrega.Trim();
+        if (datos.Estado == EstadosDonacion.Entregada && destino is null)
+            throw ReglaNegocioException.Invalida("Indica a quién o a qué actividad se entregó la donación");
+
+        var observaciones = string.IsNullOrWhiteSpace(datos.Observaciones) ? null : datos.Observaciones.Trim();
         donacion.Estado = datos.Estado;
-        donacion.Observaciones = string.IsNullOrWhiteSpace(datos.Observaciones) ? donacion.Observaciones : datos.Observaciones.Trim();
-        donacion.FechaRevision = DateTime.UtcNow;
+        donacion.Observaciones = observaciones ?? donacion.Observaciones;
+        if (datos.Estado == EstadosDonacion.Entregada)
+        {
+            donacion.DestinoEntrega = destino;
+            donacion.FechaEntrega = DateTime.UtcNow;
+        }
+        else
+        {
+            donacion.FechaRevision = DateTime.UtcNow;
+        }
+
+        _donacionData.AgregarHistorial(new HistorialDonacion
+        {
+            DonacionId = donacion.Id,
+            Accion = EstadosDonacion.Etiqueta(datos.Estado),
+            Detalle = datos.Estado == EstadosDonacion.Entregada ? $"Entregada a: {destino}" : observaciones,
+            UsuarioId = actorId,
+        });
         await _donacionData.GuardarAsync();
-        return ADto(donacion);
+        return await ADtoAsync(donacion);
     }
 
     /// <summary>Cambia solo las observaciones (también permite borrarlas).</summary>
-    public async Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones)
+    public async Task<DonacionDto> GuardarObservacionesAsync(int id, string? observaciones, int actorId)
     {
         var donacion = await _donacionData.ObtenerPorIdAsync(id)
                        ?? throw ReglaNegocioException.NoEncontrada("Donación no encontrada");
 
         donacion.Observaciones = string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim();
+        _donacionData.AgregarHistorial(new HistorialDonacion
+        {
+            DonacionId = donacion.Id,
+            Accion = "Observaciones",
+            Detalle = donacion.Observaciones ?? "Se borraron las observaciones",
+            UsuarioId = actorId,
+        });
         await _donacionData.GuardarAsync();
-        return ADto(donacion);
+        return await ADtoAsync(donacion);
     }
 
     public async Task<DonacionResumenDto> ResumenAsync()
@@ -84,12 +123,15 @@ public class DonacionService : IDonacionService
             Pendientes = porEstado.GetValueOrDefault(EstadosDonacion.PendienteRecepcion),
             Recibidas = porEstado.GetValueOrDefault(EstadosDonacion.Recibida),
             Desestimadas = porEstado.GetValueOrDefault(EstadosDonacion.Desestimada),
+            Entregadas = porEstado.GetValueOrDefault(EstadosDonacion.Entregada),
             Total = porEstado.Values.Sum(),
             Inventario = inventario.Select(a => new DonacionArticuloDto { Categoria = a.Categoria, Nombre = a.Nombre, Cantidad = a.Cantidad }).ToList(),
         };
     }
 
-    private static DonacionDto ADto(Donacion d) => new()
+    private async Task<DonacionDto> ADtoAsync(Donacion d) => ADto(d, await _donacionData.ListarHistorialAsync(new[] { d.Id }));
+
+    private static DonacionDto ADto(Donacion d, IEnumerable<HistorialDonacion> historial) => new()
     {
         Id = d.Id,
         Codigo = d.Codigo,
@@ -98,7 +140,18 @@ public class DonacionService : IDonacionService
         Estado = d.Estado,
         Observaciones = d.Observaciones,
         FechaRegistro = Mapeos.Utc(d.FechaRegistro),
+        FechaRevision = d.FechaRevision is null ? null : Mapeos.Utc(d.FechaRevision.Value),
+        DestinoEntrega = d.DestinoEntrega,
+        FechaEntrega = d.FechaEntrega is null ? null : Mapeos.Utc(d.FechaEntrega.Value),
         Articulos = d.Articulos.Select(a => new DonacionArticuloDto { Categoria = a.Categoria, Nombre = a.Nombre, Cantidad = a.Cantidad }).ToList(),
+        Acciones = EstadosDonacion.Acciones(d.Estado),
+        Historial = historial.Select(h => new HistorialDonacionDto
+        {
+            Accion = h.Accion,
+            Detalle = h.Detalle,
+            Responsable = h.Usuario is null ? null : string.IsNullOrWhiteSpace(h.Usuario.Nombre) ? h.Usuario.NombreUsuario : h.Usuario.Nombre,
+            Fecha = Mapeos.Utc(h.Fecha),
+        }).ToList(),
     };
 }
 
