@@ -11,6 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Secretos locales (p. ej. la contraseña del correo): este archivo no se sube al git.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+// En Azure la configuración (cadena de conexión, CORS, FrontUrl) llega como variables de entorno del App Service:
+// se vuelven a cargar al final para que ganen sobre appsettings.Local.json.
+builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
 
@@ -122,9 +125,14 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+// Orígenes permitidos: Cors:Origenes en appsettings (local) o Cors__Origenes__0, __1… en el App Service.
+var origenesFront = builder.Configuration.GetSection("Cors:Origenes").Get<string[]>() is { Length: > 0 } origenes
+    ? origenes
+    : new[] { "http://localhost:4200" };
+
 builder.Services.AddCors(options =>
     options.AddPolicy("Front", policy =>
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins(origenesFront)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -149,6 +157,10 @@ using (var scope = app.Services.CreateScope())
 
 app.UseHttpsRedirection();
 
+// En Azure el front Angular va en wwwroot del mismo App Service (en local no hay wwwroot y esto no hace nada).
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("Front");
 
 // Las reglas del negocio (dato inválido, sin permiso, no existe, ya ocupado) responden con su código y mensaje.
@@ -169,5 +181,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Rutas del front (/admin/bandeja, /postular…): si no es de la API ni un archivo, se devuelve index.html para que
+// Angular la resuelva. Las rutas /api que no existen siguen respondiendo 404.
+app.MapFallbackToFile("{*ruta:regex(^(?!api\\b).*$):nonfile}", "index.html");
 
 app.Run();
